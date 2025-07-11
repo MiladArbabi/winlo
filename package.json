@@ -1,0 +1,25 @@
+{
+  "name": "winlo",
+  "version": "1.0.0",
+  "description": "warehouse inventory locator",
+  "keywords": [
+    "warehouse",
+    "inventory",
+    "locator"
+  ],
+  "homepage": "https://github.com/MiladArbabi/winlo#readme",
+  "bugs": {
+    "url": "https://github.com/MiladArbabi/winlo/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MiladArbabi/winlo.git"
+  },
+  "license": "ISC",
+  "author": "milad arbabi",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  }
+}
