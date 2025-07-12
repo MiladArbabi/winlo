@@ -45,5 +45,13 @@ We’re building WINLO (Warehouse Inventory Locator) with a professional, test-d
 
 ---
 
+### SDK & INTEGRATION
+- [#17](../../issues/17) Build `@winlo/sdk-js` for embedding WINLO pick flow in existing retailer websites
+- [#18](../../issues/18) Build `@winlo/sdk-react-native` for integrating WINLO flows into retailer mobile apps
+- [#19](../../issues/19) Build configurable WINLO web widget generator for drop-in use
+
+---
+
 📌 **Progress is tracked via [GitHub Issues](../../issues) and [Milestones](../../milestones).**  
 Each issue links to pull requests that implement it, with CI/CD validation, ensuring a clean, scalable architecture.
+
