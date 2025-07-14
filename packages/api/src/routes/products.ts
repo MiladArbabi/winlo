@@ -1,13 +1,9 @@
 // packages/api/src/routes/products.ts
 import { Router } from 'express';
-import db from '../db.ts';
+import db from '../db.js';
 
 const router = Router();
 
-/**
- * GET /products
- * Returns a list of all products with their shop and location info.
- */
 router.get('/', async (_req, res, next) => {
   try {
     const rows = await db('products')

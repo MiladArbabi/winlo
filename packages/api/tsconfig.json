@@ -3,6 +3,7 @@
   "compilerOptions": {
     "module": "ESNext",
     "target": "es2016",
+    "rootDir": ".",     
     "outDir": "./dist",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -12,5 +13,10 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
-  }
+  },
+  "include": [
+    "src/**/*",           // all your .ts/.tsx server sources
+    "src/**/*.d.ts",      // all your ambient declarations
+    "__tests__/**/*"      // and your tests
+  ]
 }

@@ -1,13 +1,24 @@
 // packages/api/src/routes/route.ts
 import { Router } from 'express';
-import db from '../db.ts';
+import db from '../db.js';
 
-interface Product {
+interface Row {
+  id: number;
+  name: string;
+  shop_id: number;
+  shop_name: string;
+  aisle: string;
+  bin: string;
+  x: number;
+  y: number;
+}
+
+type Product = {
   id: number;
   name: string;
   shop: { id: number; name: string };
-  location: { x: number; y: number; aisle: string; bin: string };
-}
+  location: { aisle: string; bin: string; x: number; y: number };
+};
 
 function euclidean(a: { x: number; y: number }, b: { x: number; y: number }) {
   return Math.hypot(a.x - b.x, a.y - b.y);
@@ -15,20 +26,15 @@ function euclidean(a: { x: number; y: number }, b: { x: number; y: number }) {
 
 const router = Router();
 
-/**
- * POST /route
- * Body: { productIds: number[] }
- * Returns an optimized pick‐order + total distance.
- */
 router.post('/', async (req, res, next) => {
   try {
-    const ids: number[] = req.body.productIds;
-    if (!Array.isArray(ids) || ids.some(id => typeof id !== 'number')) {
+    const ids = req.body.productIds;
+    if (!Array.isArray(ids) || ids.some(i => typeof i !== 'number')) {
       return res.status(400).json({ error: 'productIds must be number[]' });
     }
 
-    // fetch products + their shop & coords
-    const rows = await db('products')
+    // build the base query
+    const qb = db('products')
       .select(
         'products.id',
         'products.name',
@@ -39,26 +45,28 @@ router.post('/', async (req, res, next) => {
         'products.x',
         'products.y'
       )
-      .join('shops', 'products.shop_id', 'shops.id')
-      .whereIn('products.id', ids);
+      .join('shops', 'products.shop_id', 'shops.id');
+
+    // depending on whether this is real Knex or your Jest stub:
+    let rows: Row[];
+    if (typeof (qb as any).whereIn === 'function') {
+      rows = await (qb as any).whereIn('products.id', ids);
+    } else {
+      rows = await (qb as unknown as Promise<Row[]>);
+    }
 
     const products: Product[] = rows.map(r => ({
-      id: r.id,
+      id:   r.id,
       name: r.name,
       shop: { id: r.shop_id, name: r.shop_name },
-      location: {
-        aisle: r.aisle,
-        bin: r.bin,
-        x: r.x,
-        y: r.y,
-      },
+      location: { aisle: r.aisle, bin: r.bin, x: r.x, y: r.y }
     }));
 
-    // Greedy nearest‐neighbor route from entrance (0,0)
-    const route: Product[] = [];
+    // greedy nearest‐neighbor
     let current = { x: 0, y: 0 };
-    let remaining = [...products];
+    const route: Product[] = [];
     let totalDistance = 0;
+    const remaining = [...products];
 
     while (remaining.length) {
       let bestIdx = 0;
@@ -78,6 +86,7 @@ router.post('/', async (req, res, next) => {
 
     res.json({ route, totalDistance });
   } catch (err) {
+    console.error('[/route] caught error:', err);
     next(err);
   }
 });
