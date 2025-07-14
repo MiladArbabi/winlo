@@ -17,8 +17,8 @@ We’re building WINLO (Warehouse Inventory Locator) with a professional, test-d
 ---
 
 ### CORE DB & API
-[#4](../../issues/4) ✅ Setup Knex migrations & DB connection in `packages/api`
-- [#5](../../issues/5) Create products and shops tables with seeds
+- [#4](../../issues/4) Setup Knex migrations & DB connection in `packages/api`
+- [#5](../../issues/5) Create products and shops tables with seeds        ✅
 - [#6](../../issues/6) Build `/products` API endpoint returning aisle/bin/X/Y
 - [#7](../../issues/7) Build `/route` endpoint with basic Dijkstra optimizer
 
