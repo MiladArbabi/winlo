@@ -1,14 +1,11 @@
 version: '3.8'
 services:
   postgres:
-    image: postgres:14
+    image: postgres
+    restart: always
     environment:
-      POSTGRES_USER: winlo
-      POSTGRES_PASSWORD: winlo
       POSTGRES_DB: winlo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
-  redis:
-    image: redis:6
-    ports:
-      - "6379:6379"

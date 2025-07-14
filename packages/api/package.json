@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/index.ts",
-    "build": "tsc",
+    "migrate": "knex migrate:latest --knexfile knexfile.cjs",
+    "seed": "npm run build && knex seed:run --knexfile knexfile.cjs",
     "start": "node dist/index.js",
     "lint": "echo \"No lint configured yet\"",
     "test": "echo \"No tests yet\" && exit 0",
@@ -17,10 +18,12 @@
   "type": "module",
   "dependencies": {
     "express": "^5.1.0",
+    "knex": "^3.1.0",
     "pg": "^8.16.3"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
+    "@types/knex": "^0.15.2",
     "@types/node": "^24.0.13",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
