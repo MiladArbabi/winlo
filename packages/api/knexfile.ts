@@ -1,7 +1,7 @@
 // packages/api/knexfile.ts
-import type Knex from 'knex';
+import type { Knex } from 'knex';
 
-const config: { [key: string]: Knex.Config } = {
+const config: Record<string, Knex.Config> = {
   development: {
     client: 'pg',
     connection: {
