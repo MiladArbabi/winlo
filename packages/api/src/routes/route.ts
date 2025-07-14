@@ -1,16 +1,16 @@
-// packages/api/src/routes/route.ts
 import { Router } from 'express';
+import { z } from 'zod';
 import db from '../db.js';
 
 interface Row {
-  id: number;
-  name: string;
-  shop_id: number;
-  shop_name: string;
-  aisle: string;
-  bin: string;
-  x: number;
-  y: number;
+  id:       number;
+  name:     string;
+  shop_id:  number;
+  shop_name:string;
+  aisle:    string;
+  bin:      string;
+  x:        number;
+  y:        number;
 }
 
 type Product = {
@@ -24,17 +24,23 @@ function euclidean(a: { x: number; y: number }, b: { x: number; y: number }) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
+export const RouteRequestSchema = z.object({
+  productIds: z.array(z.number().int().positive()).nonempty(),
+});
+
 const router = Router();
 
 router.post('/', async (req, res, next) => {
-  try {
-    const ids = req.body.productIds;
-    if (!Array.isArray(ids) || ids.some(i => typeof i !== 'number')) {
-      return res.status(400).json({ error: 'productIds must be number[]' });
-    }
+  // 1) validate
+  const result = RouteRequestSchema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(400).json({ error: 'Invalid payload', details: result.error.format() });
+  }
+  const { productIds } = result.data;
 
-    // build the base query
-    const qb = db('products')
+  try {
+    // 2) fetch
+    const rows = await db('products')
       .select(
         'products.id',
         'products.name',
@@ -45,16 +51,10 @@ router.post('/', async (req, res, next) => {
         'products.x',
         'products.y'
       )
-      .join('shops', 'products.shop_id', 'shops.id');
+      .join('shops', 'products.shop_id', 'shops.id')
+      .whereIn('products.id', productIds) as Row[];
 
-    // depending on whether this is real Knex or your Jest stub:
-    let rows: Row[];
-    if (typeof (qb as any).whereIn === 'function') {
-      rows = await (qb as any).whereIn('products.id', ids);
-    } else {
-      rows = await (qb as unknown as Promise<Row[]>);
-    }
-
+    // 3) map to Product
     const products: Product[] = rows.map(r => ({
       id:   r.id,
       name: r.name,
@@ -62,7 +62,7 @@ router.post('/', async (req, res, next) => {
       location: { aisle: r.aisle, bin: r.bin, x: r.x, y: r.y }
     }));
 
-    // greedy nearest‐neighbor
+    // 4) greedy nearest-neighbor
     let current = { x: 0, y: 0 };
     const route: Product[] = [];
     let totalDistance = 0;
@@ -86,7 +86,6 @@ router.post('/', async (req, res, next) => {
 
     res.json({ route, totalDistance });
   } catch (err) {
-    console.error('[/route] caught error:', err);
     next(err);
   }
 });

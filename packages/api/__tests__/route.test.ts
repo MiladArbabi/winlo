@@ -31,7 +31,19 @@ describe('POST /route', () => {
       ({
         select: () => ({
           join: () => ({
-            whereIn: () => Promise.resolve(mockRows),
+            whereIn: (_col: string, ids: number[]) =>
+              Promise.resolve(
+                ids.map(id => ({
+                  id,
+                  name: `P${id}`,
+                  shop_id: 1,
+                  shop_name: 'S',
+                  aisle: 'A',
+                  bin: '1',
+                  x: id,
+                  y: id,
+                }))
+              )
           }),
         }),
       } as any)

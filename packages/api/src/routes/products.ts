@@ -1,9 +1,11 @@
 // packages/api/src/routes/products.ts
 import { Router } from 'express';
+import { z } from 'zod';
 import db from '../db.js';
 
 const router = Router();
 
+// No body to validate, but you could validate query params if needed
 router.get('/', async (_req, res, next) => {
   try {
     const rows = await db('products')
