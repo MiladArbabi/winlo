@@ -2,13 +2,30 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import db from '../db.js';
+import { logger } from '../logger.js';
+
+const ProductsQuery = z.object({
+  shop:   z.string().regex(/^\d+$/).optional(),
+  limit:  z.string().regex(/^\d+$/).transform(Number).optional(),
+  page:   z.string().regex(/^\d+$/).transform(Number).optional(),
+  sort:   z.string().optional(),             // e.g. "x" or "y"
+  order:  z.enum(['asc', 'desc']).optional(),
+});
 
 const router = Router();
 
-// No body to validate, but you could validate query params if needed
-router.get('/', async (_req, res, next) => {
+router.get('/', async (req, res, next) => {
+  // 1) Validate & parse query params
+  const result = ProductsQuery.safeParse(req.query);
+  if (!result.success) {
+    logger.warn({ err: result.error }, 'Invalid products query');
+    return res.status(400).json({ error: 'Invalid query parameters', details: result.error.format() });
+  }
+  const { shop, limit = 50, page = 1, sort = 'id', order = 'asc' } = result.data;
+
   try {
-    const rows = await db('products')
+    // 2) Build query
+    const qb = db('products')
       .select(
         'products.id',
         'products.name',
@@ -21,6 +38,12 @@ router.get('/', async (_req, res, next) => {
       )
       .join('shops', 'products.shop_id', 'shops.id');
 
+    if (shop) qb.where('products.shop_id', Number(shop));
+    qb.orderBy(`products.${sort}`, order as 'asc' | 'desc');
+    qb.limit(limit).offset((page - 1) * limit);
+
+    // 3) Execute & map
+    const rows = await qb;
     const products = rows.map((r: any) => ({
       id:       r.id,
       name:     r.name,
@@ -28,7 +51,7 @@ router.get('/', async (_req, res, next) => {
       location: { aisle: r.aisle, bin: r.bin, x: r.x, y: r.y }
     }));
 
-    res.json(products);
+    res.json({ page, limit, data: products });
   } catch (err) {
     next(err);
   }

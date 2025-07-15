@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import db from '../db.js';
+import { logger } from '../logger.js';
 
 interface Row {
   id:       number;

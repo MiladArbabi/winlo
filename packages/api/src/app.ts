@@ -1,26 +1,28 @@
 // packages/api/src/app.ts
 import express from 'express';
+import { httpLogger, logger } from './logger.js';
 import productsRouter from './routes/products.js';
 import routeRouter    from './routes/route.js';
 
 const app = express();
 
-// 👇 parse JSON bodies
+// 1) Log every incoming request
+app.use(httpLogger);
+
+// 2) parse JSON bodies
 app.use(express.json());
 
-// 👇 mount our endpoints
+// 3) mount endpoints
 app.use('/products', productsRouter);
 app.use('/route',    routeRouter);
 
-// 👇 health-check
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' });
+// 4) health-check
+app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+
+// 5) global error handler (after all routes)
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  logger.error({ err }, 'Unhandled error');
+  res.status(500).json({ error: 'Internal Server Error' });
 });
 
 export default app;
-
-// global error handler (must come *after* all routes)
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-      console.error('[app] unhandled error:', err);
-      res.status(500).json({ error: 'Internal Server Error', details: err.message });
-    });
