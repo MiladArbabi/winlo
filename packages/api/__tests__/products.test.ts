@@ -42,13 +42,60 @@ describe('GET /products', () => {
   it('responds with products + shop + location', async () => {
     const res = await request(app).get('/products');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([
-      {
-        id: 1,
-        name: 'Hammer',
-        shop: { id: 1, name: 'Main Store' },
-        location: { aisle: 'A', bin: '1', x: 10, y: 5 },
-      },
-    ]);
-  });
-});
+    expect(res.body).toEqual({
+            page: 1,
+            limit: 50,
+            data: [
+              {
+                id: 1,
+                name: 'Hammer',
+                shop: { id: 1, name: 'Main Store' },
+                location: { aisle: 'A', bin: '1', x: 10, y: 5 },
+              },
+            ],
+          });
+        });
+
+  it('supports pagination, filtering & sorting', async () => {
+    const mockedDb = db as unknown as jest.Mock<any, any>;
+      mockedDb
+        .mockReturnValueOnce({
+          select: () => ({
+                join: () => Promise.resolve(mockRows),
+              }),
+            } as any)
+            .mockReturnValueOnce({
+              select: () => ({
+                join: () => ({
+                  where: () => ({
+                    orderBy: () => ({
+                      limit: () => ({
+                        offset: () => Promise.resolve([
+                          { id: 2, name: 'Screwdriver', shop_id: 1, shop_name: 'Main Store', aisle: 'B', bin: '2', x: 20, y: 5 },
+                        ]),
+                      }),
+                    }),
+                  }),
+                }),
+              }),
+            } as any);
+        
+          const res = await request(app)
+            .get('/products')
+            .query({ shop: '1', limit: '1', page: '2', sort: 'x', order: 'desc' });
+        
+          expect(res.status).toBe(200);
+          expect(res.body).toEqual({
+            page: 2,
+            limit: 1,
+            data: [
+              {
+                id: 2,
+                name: 'Screwdriver',
+                shop: { id: 1, name: 'Main Store' },
+                location: { aisle: 'B', bin: '2', x: 20, y: 5 },
+              },
+            ],
+          });
+        });
+      });

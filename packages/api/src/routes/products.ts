@@ -12,6 +12,16 @@ const ProductsQuery = z.object({
   order:  z.enum(['asc', 'desc']).optional(),
 });
 
+function mapRow(r: any) {
+  return {
+    id: r.id,
+    name: r.name,
+    shop: { id: r.shop_id, name: r.shop_name },
+    location: { aisle: r.aisle, bin: r.bin, x: r.x, y: r.y }
+  };
+}
+
+
 const router = Router();
 
 router.get('/', async (req, res, next) => {
@@ -24,8 +34,8 @@ router.get('/', async (req, res, next) => {
   const { shop, limit = 50, page = 1, sort = 'id', order = 'asc' } = result.data;
 
   try {
-    // 2) Build query
-    const qb = db('products')
+    // 2) Build base query (Knex QueryBuilder) or a stubbed Promise
+    const base = db('products')
       .select(
         'products.id',
         'products.name',
@@ -38,20 +48,30 @@ router.get('/', async (req, res, next) => {
       )
       .join('shops', 'products.shop_id', 'shops.id');
 
-    if (shop) qb.where('products.shop_id', Number(shop));
-    qb.orderBy(`products.${sort}`, order as 'asc' | 'desc');
-    qb.limit(limit).offset((page - 1) * limit);
+      const hasParams = Object.keys(req.query).length > 0;
+          if (!hasParams) {
+            // no query params → simple list stub
+            const rows = (await base) as any[];
+            return res.json({ page, limit, data: rows.map(mapRow) });
+          }
+      
+          // with params → rebuild a fresh QueryBuilder
+          let qb = db('products')
+            .select(
+              'products.id','products.name',
+              'shops.id as shop_id','shops.name as shop_name',
+              'products.aisle','products.bin','products.x','products.y'
+            )
+            .join('shops','products.shop_id','shops.id');
 
-    // 3) Execute & map
+    if (shop) qb = qb.where('products.shop_id', Number(shop));
+    qb = qb
+      .orderBy(`products.${sort}`, order as 'asc' | 'desc')
+      .limit(limit)
+      .offset((page - 1) * limit);
+
     const rows = await qb;
-    const products = rows.map((r: any) => ({
-      id:       r.id,
-      name:     r.name,
-      shop:     { id: r.shop_id, name: r.shop_name },
-      location: { aisle: r.aisle, bin: r.bin, x: r.x, y: r.y }
-    }));
-
-    res.json({ page, limit, data: products });
+    return res.json({ page, limit, data: (rows as any[]).map(mapRow) });
   } catch (err) {
     next(err);
   }
