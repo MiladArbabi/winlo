@@ -18,9 +18,9 @@ We’re building WINLO with a professional, test-driven, milestone-focused appro
 
 ### CORE DB & API
 - [#4](../../issues/4) Setup Knex migrations & DB connection in `packages/api`  
-- [#5](../../issues/5) Create products and shops tables with seeds ✅  
-- [#6](../../issues/6) Build `/products` endpoint returning product + shop + location ✅  
-- [#7](../../issues/7) Build `/route` endpoint with nearest-neighbor optimizer ✅  
+- [#5](../../issues/5) Create products and shops tables with seeds   
+- [#6](../../issues/6) Build `/products` endpoint returning product + shop + location 
+- [#7](../../issues/7) Build `/route` endpoint with nearest-neighbor optimizer  
 - [#27](../../issues/27) Add input validation & sanitization to all endpoints  
 - [#28](../../issues/28) Implement structured request logging & error reporting  
 - [#29](../../issues/29) Add pagination, filtering & sorting to `/products` endpoint  
