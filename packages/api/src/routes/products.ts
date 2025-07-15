@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import db from '../db.js';
 import { logger } from '../logger.js';
+import { redisClient } from '../redis.js';
 
 const ProductsQuery = z.object({
   shop:   z.string().regex(/^\d+$/).optional(),
@@ -34,7 +35,18 @@ router.get('/', async (req, res, next) => {
   const { shop, limit = 50, page = 1, sort = 'id', order = 'asc' } = result.data;
 
   try {
-    // 2) Build base query (Knex QueryBuilder) or a stubbed Promise
+  // build cache key once (we’ll only use it outside test env)
+  const cacheKey = `products:${JSON.stringify(req.query)}`;
+  // --- CACHING LAYER (skip in tests) ---
+  if (process.env.NODE_ENV !== 'test') {
+    const cached = await redisClient.get(cacheKey);
+    if (cached) {
+      logger.info({ cacheKey }, 'cache hit');
+      return res.json(JSON.parse(cached));
+    }
+  }  
+
+    // 3) Cache miss: run full logic    
     const base = db('products')
       .select(
         'products.id',
@@ -48,11 +60,21 @@ router.get('/', async (req, res, next) => {
       )
       .join('shops', 'products.shop_id', 'shops.id');
 
+      const maybeRows = await base;
       const hasParams = Object.keys(req.query).length > 0;
+
           if (!hasParams) {
             // no query params → simple list stub
             const rows = (await base) as any[];
             return res.json({ page, limit, data: rows.map(mapRow) });
+          }
+
+          if (!hasParams && Array.isArray(maybeRows)) {
+            const payload = { page, limit, data: maybeRows.map(mapRow) };
+            if (process.env.NODE_ENV !== 'test') {
+              await redisClient.set(cacheKey, JSON.stringify(payload), { EX: 60 });
+            }
+            return res.json(payload);
           }
       
           // with params → rebuild a fresh QueryBuilder
@@ -71,8 +93,13 @@ router.get('/', async (req, res, next) => {
       .offset((page - 1) * limit);
 
     const rows = await qb;
-    return res.json({ page, limit, data: (rows as any[]).map(mapRow) });
-  } catch (err) {
+    const payload = { page, limit, data: (rows as any[]).map(mapRow) };
+    // cache the paginated result
+    if (process.env.NODE_ENV !== 'test') {
+      await redisClient.set(cacheKey, JSON.stringify(payload), { EX: 60 });
+    }    
+    return res.json(payload);
+    } catch (err) {
     next(err);
   }
 });
