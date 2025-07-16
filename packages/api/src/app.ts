@@ -1,11 +1,31 @@
 // packages/api/src/app.ts
 import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { httpLogger, logger } from './logger.js';
 import productsRouter from './routes/products.js';
 import routeRouter    from './routes/route.js';
 import v1Router       from './routes/v1/index.js';
 
 const app = express();
+
+// 0) Security headers
+app.use(helmet());
+
+// 0b) CORS – only allow origins in env.ALLOWED_ORIGINS (comma‑sep), fallback to none
+const origins = process.env.ALLOWED_ORIGINS?.split(',') || [];
+app.use(cors({ origin: origins, optionsSuccessStatus: 200 }));
+
+// 0c) Rate limiting – 100 requests per IP per 15 minutes
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
+);
 
 // 1) Log every incoming request
 app.use(httpLogger);
