@@ -3,6 +3,7 @@ import express from 'express';
 import { httpLogger, logger } from './logger.js';
 import productsRouter from './routes/products.js';
 import routeRouter    from './routes/route.js';
+import v1Router       from './routes/v1/index.js';
 
 const app = express();
 
@@ -12,9 +13,8 @@ app.use(httpLogger);
 // 2) parse JSON bodies
 app.use(express.json());
 
-// 3) mount endpoints
-app.use('/products', productsRouter);
-app.use('/route',    routeRouter);
+// 3) versioned v1 routes
+app.use('/v1', v1Router);
 
 // 4) health-check
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));

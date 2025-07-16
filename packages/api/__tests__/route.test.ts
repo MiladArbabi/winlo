@@ -51,12 +51,12 @@ describe('POST /route', () => {
   });
 
   it('rejects bad payload', async () => {
-    const res = await request(app).post('/route').send({ productIds: ['foo'] });
+    const res = await request(app).post('/v1/route').send({ productIds: ['foo'] });
     expect(res.status).toBe(400);
   });
 
   it('returns a nearest-neighbor route + totalDistance', async () => {
-    const res = await request(app).post('/route').send({ productIds: [1, 2] });
+    const res = await request(app).post('/v1/route').send({ productIds: [1, 2] });
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.route)).toBe(true);
     expect(typeof res.body.totalDistance).toBe('number');

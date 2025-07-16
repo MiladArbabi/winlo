@@ -40,7 +40,8 @@ describe('GET /products', () => {
   });
 
   it('responds with products + shop + location', async () => {
-    const res = await request(app).get('/products');
+    const res = await request(app)
+      .get('/v1/products');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
             page: 1,
@@ -81,7 +82,7 @@ describe('GET /products', () => {
             } as any);
         
           const res = await request(app)
-            .get('/products')
+            .get('/v1/products')
             .query({ shop: '1', limit: '1', page: '2', sort: 'x', order: 'desc' });
         
           expect(res.status).toBe(200);

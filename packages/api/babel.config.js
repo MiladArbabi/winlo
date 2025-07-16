@@ -1,3 +1,4 @@
+// packages/api/babel.config.js
 module.exports = {
     presets: [
       // compile to your current Node.js version

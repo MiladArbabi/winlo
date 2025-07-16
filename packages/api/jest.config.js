@@ -1,7 +1,7 @@
 // packages/api/jest.config.cjs
 /** @type {import('jest').Config} */
 module.exports = {
-  preset: 'ts-jest/presets/js-with-ts-esm',
+  preset: 'ts-jest/presets/default-esm',
   testEnvironment: 'node',
   roots: ['<rootDir>/src', '<rootDir>/__tests__'],
   moduleFileExtensions: ['ts', 'js', 'json', 'node'],
