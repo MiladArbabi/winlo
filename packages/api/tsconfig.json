@@ -18,5 +18,5 @@
     "src/**/*",           // all your .ts/.tsx server sources
     "src/**/*.d.ts",      // all your ambient declarations
     "__tests__/**/*"      // and your tests
-  ]
+, "migrations/20250715000000_add_product_indexes.cjs"  ]
 }

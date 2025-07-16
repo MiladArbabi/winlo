@@ -9,7 +9,7 @@ module.exports = {
       password: 'postgres',
       database: 'winlo'
     },
-    migrations:{ directory: './migrations', extension: 'cjs' },
-    seeds:     { directory: './seeds',      extension: 'cjs' }
+    migrations: { directory: './migrations',   extension: 'cjs' },
+    seeds:     { directory: './seeds', extension: 'cjs' }
   }
 };
