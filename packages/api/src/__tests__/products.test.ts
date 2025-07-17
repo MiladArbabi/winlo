@@ -1,9 +1,9 @@
 // packages/api/__tests__/products.test.ts
 import request from 'supertest';
-import app from '../src/app.js';
-import db from '../src/db.js';
+import app from '../app.js';
+import db from '../db.js';
 
-jest.mock('../src/db.js', () => ({
+jest.mock('../db.js', () => ({
   __esModule: true,
   default: jest.fn(),
 }));

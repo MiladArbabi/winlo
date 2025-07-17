@@ -7,11 +7,11 @@
   "scripts": {
     "dev": "nodemon",
     "build": "tsc -p tsconfig.json",
-    "migrate": "knex migrate:latest --knexfile ./knexfile.cjs",
-    "seed": "npm run build && knex seed:run --knexfile knexfile.cjs",
+    "migrate": "knex migrate:latest --knexfile ./config/knexfile.cjs",
+    "seed":    "knex seed:run --knexfile ./config/knexfile.cjs",
     "start": "node dist/index.js",
     "lint": "echo \"No lint configured yet\"",
-    "test": "jest"
+    "test":    "jest --config ./config/jest.config.cjs"
   },
   "keywords": [],
   "author": "",
