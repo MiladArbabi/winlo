@@ -1,6 +1,51 @@
 # WINLO
 
-Warehouse Inventory Locator (WINLO) is a B2B SaaS for warehouse-style shops to help customers find products fast, optimize repeat trips, and give shop owners heatmaps & insights.
+Warehouse Inventory Locator (WINLO) is a B2B SaaS for warehouse‐style shops to help customers find products fast, optimize repeat trips, and give shop owners heatmaps & insights.
+
+---
+
+## 🛠️ Getting Started
+
+### Prerequisites
+
+- **Node.js** v16+  
+- **PostgreSQL** (e.g. `postgres://postgres:postgres@localhost:5432/winlo`)  
+- **Redis** _(optional, for caching)_  
+- **Docker & Docker Compose** _(for containerized development)_
+
+### Installation
+
+'''bash
+# from project root:
+git clone https://github.com/MiladArbabi/winlo.git
+cd winlo/packages/api
+npm install
+
+# PostgreSQL
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/winlo
+
+# Redis (optional)
+REDIS_URL=redis://localhost:6379
+
+# CORS – comma‑separated list of allowed origins
+ALLOWED_ORIGINS=http://localhost:3000
+
+# Server
+PORT=4000
+
+# run migrations
+npm run migrate
+
+# seed initial data
+npm run seed
+
+# start in watch mode
+npm run dev
+
+# or build + start + test
+npm run build
+npm start
+npm test
 
 ## 🚀 Roadmap
 
