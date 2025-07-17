@@ -9,6 +9,8 @@
     "build": "tsc -p tsconfig.json",
     "migrate": "knex migrate:latest --knexfile ./config/knexfile.cjs",
     "seed":    "knex seed:run --knexfile ./config/knexfile.cjs",
+    "migrate:test": "knex migrate:latest --env test --knexfile ./config/knexfile.cjs",
+    "seed:test":    "knex seed:run     --env test --knexfile ./config/knexfile.cjs",
     "start": "node dist/index.js",
     "lint": "echo \"No lint configured yet\"",
     "test":    "jest --config ./config/jest.config.cjs"
