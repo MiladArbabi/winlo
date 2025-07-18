@@ -1,22 +1,28 @@
-//packages/api/tsconfig.json
+// packages/api/tsconfig.json
 {
   "compilerOptions": {
     "module": "ESNext",
     "target": "es2016",
-    "rootDir": ".",     
+    "rootDir": ".",
     "outDir": "./dist",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "noEmit": true,
-    "allowImportingTsExtensions": true,
+    "noEmit": false,
+    // "allowImportingTsExtensions": true,
     "moduleResolution": "Node",
     "strict": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "./config/knexfile.cjs": ["./config/knexfile.cjs.d.ts"]
+    }
   },
   "include": [
     "src/**/*",           // all your .ts/.tsx server sources
     "src/**/*.d.ts",      // all your ambient declarations
-    "__tests__/**/*"      // and your tests
-, "migrations/20250715000000_add_product_indexes.cjs"  ]
+    "__tests__/**/*",      // and your tests
+    "migrations/20250715000000_add_product_indexes.cjs", 
+    "config/knexfile.cjs.d.ts"  
+  ]
 }

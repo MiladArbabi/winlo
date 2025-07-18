@@ -1,4 +1,4 @@
-// packages/api/knexfile.cjs
+// packages/api/config/knexfile.cjs
 require('ts-node').register();
 module.exports = {
   development: {
