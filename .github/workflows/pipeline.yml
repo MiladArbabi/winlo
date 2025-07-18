@@ -43,6 +43,11 @@ jobs:
       - name: Run tests
         run: npm test
 
+        # on the API slice, also check coverage
+      - name: Enforce coverage threshold
+        if: matrix.pkg == 'api'
+        run: npm run coverage
+
   # 2) Build & Push API Docker image
   build-and-push-api:
     name: 📦 Build & Push API image

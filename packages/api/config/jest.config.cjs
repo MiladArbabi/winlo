@@ -16,4 +16,14 @@ module.exports = {
   extensionsToTreatAsEsm: ['.ts'],
   // let Babel transform your ts files so the extension can parse them
   transformIgnorePatterns: [],
+  collectCoverage: true,
+  coverageDirectory: 'coverage',
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80
+    }
+  },
 };
