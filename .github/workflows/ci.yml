@@ -8,6 +8,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/api
     services:
       postgres:
         image: postgres:14
@@ -47,6 +50,7 @@ jobs:
       - name: Run DB migrations (test)
         run: npm run migrate:test
 
+      
       - name: Seed test database
         run: npm run seed:test
 

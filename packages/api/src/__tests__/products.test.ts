@@ -99,4 +99,177 @@ describe('GET /products', () => {
             ],
           });
         });
-      });
+        it('returns 400 when query params are invalid', async () => {
+              // e.g. non-numeric limit
+              const res = await request(app)
+                .get('/v1/products')
+                .query({ limit: 'not-a-number' });
+          
+              expect(res.status).toBe(400);
+              expect(res.body).toHaveProperty('error', 'Invalid query parameters');
+              // details will include a parse error for .limit
+              expect(res.body.details.limit).toBeDefined();
+            });
+          
+            it('short‑circuits and returns cached payload on cache hit', async () => {
+              // temporarily simulate non-test env so caching runs
+              const oldEnv = process.env.NODE_ENV;
+              process.env.NODE_ENV = 'development';
+          
+              // spy on redisClient.get and logger.info
+              const { redisClient } = await import('../redis.js');
+              const { logger } = await import('../logger.js');
+              jest.spyOn(redisClient, 'get').mockResolvedValueOnce(
+                JSON.stringify({ page: 1, limit: 50, data: [{ id: 9, name: 'Cached', shop: { id: 1, name: 'Store' }, location: { aisle: 'Z', bin: '9', x: 0, y: 0 } }] })
+              );
+              const infoSpy = jest.spyOn(logger, 'info').mockImplementation(() => {});
+          
+              const res = await request(app).get('/v1/products');
+              expect(res.status).toBe(200);
+              expect(res.body).toEqual({
+                page: 1,
+                limit: 50,
+                data: [
+                  { id: 9, name: 'Cached', shop: { id: 1, name: 'Store' }, location: { aisle: 'Z', bin: '9', x: 0, y: 0 } }
+                ]
+              });
+          
+              // verify we logged the cache hit
+              expect(infoSpy).toHaveBeenCalledWith(
+                expect.objectContaining({ cacheKey: 'products:{}' }),
+                'cache hit'
+              );
+          
+              // restore env
+              process.env.NODE_ENV = oldEnv;
+            });
+
+            it('filters by shop only (default sort/page) via where→orderBy→limit→offset', async () => {
+              const mockedDb = db as unknown as jest.Mock<any, any>;
+          
+              // 1st call for base to check maybeRows (we don’t use it when hasParams=true, but your code still awaits it)
+              mockedDb.mockReturnValueOnce({
+                select: () => ({
+                  join: () => Promise.resolve(mockRows),
+                }),
+              } as any);
+          
+              // 2nd call for qb → where → orderBy → limit → offset
+              mockedDb.mockReturnValueOnce({
+                select: () => ({
+                  join: () => ({
+                    where: () => ({
+                      orderBy: () => ({
+                        limit: () => ({
+                          offset: () => Promise.resolve([
+                            { 
+                              id: 3, 
+                              name: 'Wrench', 
+                              shop_id: 2, 
+                              shop_name: 'Side Store', 
+                              aisle: 'C', 
+                              bin: '3', 
+                              x: 30, 
+                              y: 15 
+                            },
+                          ]),
+                        }),
+                      }),
+                    }),
+                  }),
+                }),
+              } as any);
+          
+              const res = await request(app)
+                .get('/v1/products')
+                .query({ shop: '2' });
+          
+              expect(res.status).toBe(200);
+              expect(res.body).toEqual({
+                page: 1,
+                limit: 50,
+                data: [
+                  {
+                    id: 3,
+                    name: 'Wrench',
+                    shop: { id: 2, name: 'Side Store' },
+                    location: { aisle: 'C', bin: '3', x: 30, y: 15 },
+                  },
+                ],
+              });
+            });
+          
+            it('returns 500 when the DB layer throws', async () => {
+              const mockedDb = db as unknown as jest.Mock<any, any>;
+          
+              // stub the very first call to reject
+              mockedDb.mockReturnValueOnce({
+                select: () => ({
+                  join: () => Promise.reject(new Error('db down')),
+                }),
+              } as any);
+          
+              const res = await request(app).get('/v1/products');
+              expect(res.status).toBe(500);
+              expect(res.body).toEqual({ error: 'Internal Server Error' });
+            });
+          });
+          
+describe('extra GET /products branches', () => {
+  const mockRows: Row[] = [
+    { id: 1, name: 'Hammer', shop_id: 1, shop_name: 'Main Store', aisle: 'A', bin: '1', x: 10, y: 5 }
+  ];
+
+  it('filters by shop only via where→orderBy→limit→offset', async () => {
+    const mockedDb = db as unknown as jest.Mock<any, any>;
+    // first call for maybeRows (we don’t use it when hasParams=true)
+    mockedDb.mockReturnValueOnce({
+      select: () => ({ join: () => Promise.resolve(mockRows) }),
+    } as any);
+
+    // second call drives the filtered path
+    mockedDb.mockReturnValueOnce({
+      select: () => ({
+        join: () => ({
+          where: () => ({
+            orderBy: () => ({
+              limit: () => ({
+                offset: () => Promise.resolve([
+                  { id: 3, name: 'Wrench', shop_id: 2, shop_name: 'Side Store', aisle: 'C', bin: '3', x: 30, y: 15 }
+                ])
+              })
+            })
+          })
+        })
+      })
+    } as any);
+
+    const res = await request(app)
+      .get('/v1/products')
+      .query({ shop: '2' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      page: 1,
+      limit: 50,
+      data: [{
+        id: 3,
+        name: 'Wrench',
+        shop: { id: 2, name: 'Side Store' },
+        location: { aisle: 'C', bin: '3', x: 30, y: 15 },
+      }],
+    });
+  });
+
+  it('returns 500 when the DB layer throws', async () => {
+    const mockedDb = db as unknown as jest.Mock<any, any>;
+    // stub the very first .join() to reject
+    mockedDb.mockReturnValueOnce({
+      select: () => ({ join: () => Promise.reject(new Error('db down')) }),
+    } as any);
+
+    const res = await request(app).get('/v1/products');
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: 'Internal Server Error' });
+  });
+});          
