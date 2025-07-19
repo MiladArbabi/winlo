@@ -14,7 +14,8 @@
     "start": "node dist/index.js",
     "lint": "echo \"No lint configured yet\"",
     "test": "jest --config ./config/jest.config.cjs",
-    "coverage": "npm test -- --coverage"
+    "coverage": "npm test -- --coverage",
+    "prepare": "husky install .husky"
   },
   "keywords": [],
   "author": "",
@@ -38,6 +39,8 @@
     "@babel/core": "^7.28.0",
     "@babel/preset-env": "^7.28.0",
     "@babel/preset-typescript": "^7.27.1",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/jest": "^29.0.0",
