@@ -8,7 +8,9 @@
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "test": "npm --workspaces run test",
+    "lint": "npm --workspaces run lint"
   },
   "dependencies": {
     "express": "^5.1.0",
