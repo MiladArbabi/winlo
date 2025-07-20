@@ -7,7 +7,14 @@ import { httpLogger, logger } from './logger.js';
 import productsRouter from './routes/products.js';
 import routeRouter    from './routes/route.js';
 import v1Router       from './routes/v1/index.js';
+import swaggerUI from 'swagger-ui-express';
+import YAML from 'yamljs';
+import path, { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
 
+// === emulate __dirname in ESM ===
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = dirname(__filename);
 const app = express();
 
 // 0) Security headers
@@ -26,6 +33,10 @@ app.use(
     legacyHeaders: false,
   })
 );
+
+// ** serve OpenAPI UI **
+const spec = YAML.load(resolve(__dirname, 'openapi.yaml'));
+app.use('/docs', swaggerUI.serve, swaggerUI.setup(spec));
 
 // 1) Log every incoming request
 app.use(httpLogger);

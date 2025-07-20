@@ -1,4 +1,3 @@
-// packages/api/tsconfig.json
 {
   "compilerOptions": {
     "module": "ESNext",
@@ -14,9 +13,6 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "baseUrl": ".",
-    "paths": {
-      "./config/knexfile.cjs": ["./config/knexfile.cjs.d.ts"]
-    }
   },
   "include": [
     "src/**/*",           // all your .ts/.tsx server sources
