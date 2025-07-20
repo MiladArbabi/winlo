@@ -15,7 +15,6 @@ Warehouse Inventory Locator (WINLO) is a B2B SaaS for warehouse‐style shops to
 
 ### Installation
 
-'''bash
 # from project root:
 git clone https://github.com/MiladArbabi/winlo.git
 cd winlo/packages/api
@@ -47,10 +46,11 @@ npm run build
 npm start
 npm test
 
-## 🚀 Roadmap
-
-This project is structured around clear milestones, each tracked by dedicated GitHub issues.  
+## Roadmap
+This project is structured around clear milestones, each tracked by dedicated GitHub issues.
 We’re building WINLO with a professional, test-driven, milestone-focused approach.
+
+
 
 ---
 
