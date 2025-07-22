@@ -11,7 +11,6 @@ redisClient.on('error', err => {
   logger.error({ err }, 'Redis client error');
 });
 
-
 // Only wire up Redis outside of test
 if (process.env.NODE_ENV !== 'test') {
     redisClient.connect().catch(err => {

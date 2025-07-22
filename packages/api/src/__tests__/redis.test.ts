@@ -82,4 +82,42 @@ describe('redis.ts', () => {
       'Failed to connect to Redis',
     );
   });
+
+  it('uses REDIS_URL env var when provided', async () => {
+        process.env.REDIS_URL = 'redis://example.com:6380';
+        jest.resetModules();
+        // re‑mock redis before reload
+        jest.doMock('redis', () => ({ createClient }));
+    
+        await import('../redis.js');
+        expect(createClient).toHaveBeenCalledWith({
+          url: 'redis://example.com:6380',
+        });
+      });
+    
+      it('logs via logger.error when the client emits "error"', async () => {
+        // reload modules and re‑mock redis so redis.ts will use this spy
+        jest.resetModules();
+        jest.doMock('redis', () => ({ createClient }));
+
+        // import the fresh logger and spy on .error
+        const { logger } = await import('../logger.js');
+        const errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => {});
+
+        // now import redis.ts (it will register its .on('error'…) handler against our spied logger)
+        const { redisClient } = await import('../redis.js');
+    
+        // find the registered handler for 'error' and cast it
+        const errorCall = mockOn.mock.calls.find(([event]) => event === 'error');
+        expect(errorCall).toBeDefined();
+        const errHandler = errorCall![1] as (err: Error) => void;
+        const boom = new Error('boom!');
+        // simulate emit
+        errHandler(boom);
+    
+        expect(errorSpy).toHaveBeenCalledWith(
+          { err: boom },
+          'Redis client error'
+        );
+      });
 })
