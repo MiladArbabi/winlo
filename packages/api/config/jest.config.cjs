@@ -1,4 +1,4 @@
-// packages/api/jest.config.cjs
+// packages/api/config/jest.config.cjs
 /** @type {import('jest').Config} */
 module.exports = {
   rootDir: '../',
@@ -14,7 +14,7 @@ module.exports = {
     '^.+\\.(ts|tsx)$': ['ts-jest', { useESM: true }],
   },
   extensionsToTreatAsEsm: ['.ts'],
-  // let Babel transform your ts files so the extension can parse them
+  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/dist/'],
   transformIgnorePatterns: [],
   collectCoverage: true,
   coverageDirectory: 'coverage',

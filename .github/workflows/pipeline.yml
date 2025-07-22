@@ -12,7 +12,6 @@ permissions:
   id-token: write              # if you later need OIDC for cloud
 
 env:
-  # registry namespace
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/winlo-api
 
@@ -43,10 +42,16 @@ jobs:
       - name: Run tests
         run: npm test
 
-        # on the API slice, also check coverage
+      # on the API slice, also check coverage
       - name: Enforce coverage threshold
         if: matrix.pkg == 'api'
         run: npm run coverage
+
+      - name: Upload Jest cache
+        uses: actions/cache@v3
+        with:
+          path: packages/${{ matrix.pkg }}/node_modules/.cache
+          key: ${{ runner.os }}-jest-${{ matrix.pkg }}-${{ hashFiles('**/package-lock.json') }}
 
   # 2) Build & Push API Docker image
   build-and-push-api:
@@ -57,6 +62,20 @@ jobs:
       run:
         working-directory: packages/api
     steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Restore buildx cache
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
       - name: Checkout repo
         uses: actions/checkout@v4
 
@@ -71,11 +90,18 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./Dockerfile       # adjust path if needed
+          file: ./Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+
+      - name: Rotate buildx cache
+        if: success()
+        run: |
+          rm -rf /tmp/.buildx-cache && mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
   # 3) Build Admin for static hosting (optional deploy step later)
   build-admin:
@@ -101,27 +127,82 @@ jobs:
       - name: Build Next.js admin
         run: npm run build
 
-      # (optional) upload the out/ directory as an artifact
-      # - name: Upload admin build artifact
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: admin-build
-      #     path: .next
+  # 4) Baseline OWASP ZAP passive scan
+  security-scan:
+    name: 🔒 Baseline OWASP ZAP passive scan
+    needs: build-and-push-api
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/api
 
-  # 4) (Future) Deploy to staging via SSH + Docker Compose
-  #deploy-staging:
-  #  name: 🚢 Deploy to Staging
-  #  runs-on: ubuntu-latest
-  #  needs: build-and-push-api
-  #  steps:
-  #    - uses: actions/checkout@v4
-  #    - name: SSH & deploy
-  #      uses: appleboy/ssh-action@v0.1.7
-  #      with:
-  #        host: ${{ secrets.STAGING_HOST }}
-  #        username: ${{ secrets.STAGING_USER }}
-  #        key: ${{ secrets.STAGING_SSH_KEY }}
-  #        script: |
-  #          cd /srv/winlo
-  #          docker-compose pull api
-  #          docker-compose up -d api
+    services:
+      postgres:
+        image: postgres:14
+        ports: [5432]
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: winlo
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 2s
+          --health-retries 12
+
+      redis:
+        image: redis:7
+        ports: [6379]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull API image
+        run: docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Start API container
+        run: |
+          docker run -d \
+            --name winlo-api \
+            --network host \
+            -e PGHOST=localhost \
+            -e PGUSER=postgres \
+            -e PGPASSWORD=postgres \
+            -e PGDATABASE=winlo \
+            -e REDIS_URL=redis://localhost:6379 \
+            -e PORT=3000 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Wait for API to be healthy
+        run: |
+          for i in {1..12}; do
+            if curl -fs http://localhost:3000/health; then
+              echo "API is up"; exit 0
+            fi
+            echo "Waiting for API…"
+            sleep 5
+          done
+          exit 1
+
+      - name: Smoke‑test endpoints
+        run: |
+          curl -f http://localhost:3000/health
+          curl -f http://localhost:3000/v1/products
+
+      - name: Run ZAP baseline scan
+        uses: zaproxy/action-baseline@v0.4.0
+        with:
+          target: 'http://localhost:3000'
+          fail_action: true
+
+      - name: Tear down API
+        if: always()
+        run: docker rm -f winlo-api

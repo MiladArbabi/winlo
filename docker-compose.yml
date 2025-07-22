@@ -1,11 +1,31 @@
-version: '3.8'
 services:
-  postgres:
-    image: postgres
-    restart: always
+  api:
+    build:
+      context: ./packages/api
+      dockerfile: Dockerfile
     environment:
-      POSTGRES_DB: winlo
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: winlo
+      REDIS_URL:  redis://redis:6379
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:14
+    environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: winlo
     ports:
-      - "5432:5432"
+      - "5433:5432"
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"

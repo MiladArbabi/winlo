@@ -1,0 +1,99 @@
+openapi: 3.0.3
+info:
+  title: WINLO API
+  version: 1.0.0
+  description: Warehouse Inventory Locator (WINLO) API
+servers:
+  - url: /v1
+paths:
+  /products:
+    get:
+      summary: List products
+      parameters:
+        - name: shop
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: sort
+          in: query
+          schema:
+            type: string
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductList'
+  /route:
+    post:
+      summary: Compute optimized route
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteRequest'
+      responses:
+        '200':
+          description: Route planned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteResponse'
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        shop:
+          type: object
+          properties:
+            id: { type: integer }
+            name: { type: string }
+        location:
+          type: object
+          properties:
+            aisle: { type: string }
+            bin: { type: string }
+            x: { type: number }
+            y: { type: number }
+    ProductList:
+      type: object
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+    RouteRequest:
+      type: object
+      properties:
+        start: { type: array, items: { type: number } }
+        stops: 
+          type: array
+          items: { type: array, items: { type: number } }
+    RouteResponse:
+      type: object
+      properties:
+        route:
+          type: array
+          items: { $ref: '#/components/schemas/Product' }

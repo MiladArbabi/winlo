@@ -1,14 +1,16 @@
 {
   "compilerOptions": {
-    "module": "ESNext",
+    "module": "node16",
     "target": "es2016",
-    "rootDir": ".",
+    "rootDir": "src",
     "outDir": "./dist",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "noEmit": false,
     // "allowImportingTsExtensions": true,
-    "moduleResolution": "Node",
+    "moduleResolution": "node16",
+    "isolatedModules": true,
+    "resolveJsonModule": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
@@ -20,5 +22,9 @@
     "__tests__/**/*",      // and your tests
     "migrations/20250715000000_add_product_indexes.cjs", 
     "config/knexfile.cjs.d.ts"  
+  ],
+  "exclude": [
+    "src/__tests__",
+    "dist"
   ]
 }

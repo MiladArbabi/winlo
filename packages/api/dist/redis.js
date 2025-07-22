@@ -8,7 +8,7 @@ export const redisClient = createClient({
 redisClient.on('error', err => {
     logger.error({ err }, 'Redis client error');
 });
-// Connect immediately (fire‑and‑forget)
+// Only wire up Redis outside of test
 if (process.env.NODE_ENV !== 'test') {
     redisClient.connect().catch(err => {
         logger.error({ err }, 'Failed to connect to Redis');

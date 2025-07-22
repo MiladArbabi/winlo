@@ -4,12 +4,10 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { httpLogger, logger } from './logger.js';
-import productsRouter from './routes/products.js';
-import routeRouter    from './routes/route.js';
 import v1Router       from './routes/v1/index.js';
 import swaggerUI from 'swagger-ui-express';
 import YAML from 'yamljs';
-import path, { dirname, resolve } from 'path';
+import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 // === emulate __dirname in ESM ===
@@ -52,8 +50,9 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 // 5) global error handler (after all routes)
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error(err.stack || err);
   logger.error({ err }, 'Unhandled error');
-  res.status(500).json({ error: 'Internal Server Error' });
+  res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
 
 export default app;

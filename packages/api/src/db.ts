@@ -8,7 +8,7 @@ const require = createRequire(import.meta.url);
 const config = require('../config/knexfile.cjs') as Record<string, any>;
 
 const env = process.env.NODE_ENV ?? 'development';
-const knexConfig = (config as any)[env];
+const knexConfig = (config as any)[env];    
 
 if (!knexConfig) {
   throw new Error(`No knex configuration found for environment: ${env}`);

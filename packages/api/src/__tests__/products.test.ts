@@ -1,275 +1,173 @@
-// packages/api/__tests__/products.test.ts
-import request from 'supertest';
-import app from '../app.js';
-import db from '../db.js';
+// packages/api/src/__tests__/products.test.ts
+import { jest }   from '@jest/globals';
+import request     from 'supertest';
 
-jest.mock('../db.js', () => ({
+// Force “test” so we skip real Redis cache by default
+process.env.NODE_ENV = 'test';
+
+// 1) Mock before importing app, db, and redis
+await jest.unstable_mockModule('../db.js', () => ({
   __esModule: true,
-  default: jest.fn(),
+  default: jest.fn(),            // our db() mock
+}));
+await jest.unstable_mockModule('../redis.js', () => ({
+  __esModule: true,
+  redisClient: {
+    get: jest.fn(async () => null),
+    set: jest.fn(async () => {}),
+  },
 }));
 
-// mirror the Row shape your real code selects
-type Row = {
-  id: number;
-  name: string;
-  shop_id: number;
-  shop_name: string;
-  aisle: string;
-  bin: string;
-  x: number;
-  y: number;
-};
+// 2) Now import app, db, and redisClient:
+const [
+  { default: app },
+  { default: db },
+  { redisClient },
+] = await Promise.all([
+  import('../app.js'),
+  import('../db.js'),
+  import('../redis.js'),
+]);
 
-describe('GET /products', () => {
-  // now TS knows mockRows is Row[]
-  const mockRows: Row[] = [
-    { id: 1, name: 'Hammer', shop_id: 1, shop_name: 'Main Store', aisle: 'A', bin: '1', x: 10, y: 5 }
-  ];
+describe('GET /v1/products', () => {
+  type Row = {
+    id:        number;
+    name:      string;
+    shop_id:   number;
+    shop_name: string;
+    aisle:     string;
+    bin:       string;
+    x:         number;
+    y:         number;
+  };
 
-  beforeAll(() => {
-    // cast db to Jest mock so TS lets you call mockReturnValueOnce
-    const mockedDb = db as unknown as jest.Mock<any, any>;
-    mockedDb.mockReturnValueOnce(
-      // pretend this object is any, so TS stops type-checking .join()
-      ({
-        select: () => ({
-          join: () => Promise.resolve(mockRows),
-        }),
-      } as any)
-    );
+  // cast db to jest.Mock so TS lets us mock return values:
+  const dbMock    = db as unknown as jest.Mock;
+  const cacheGet  = redisClient.get as unknown as jest.Mock;
+  const cacheSet  = redisClient.set as unknown as jest.Mock;
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+    process.env.NODE_ENV = 'test';
   });
 
-  it('responds with products + shop + location', async () => {
-    const res = await request(app)
-      .get('/v1/products');
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({
-            page: 1,
-            limit: 50,
-            data: [
-              {
-                id: 1,
-                name: 'Hammer',
-                shop: { id: 1, name: 'Main Store' },
-                location: { aisle: 'A', bin: '1', x: 10, y: 5 },
-              },
-            ],
-          });
-        });
-
-  it('supports pagination, filtering & sorting', async () => {
-    const mockedDb = db as unknown as jest.Mock<any, any>;
-      mockedDb
-        .mockReturnValueOnce({
-          select: () => ({
-                join: () => Promise.resolve(mockRows),
-              }),
-            } as any)
-            .mockReturnValueOnce({
-              select: () => ({
-                join: () => ({
-                  where: () => ({
-                    orderBy: () => ({
-                      limit: () => ({
-                        offset: () => Promise.resolve([
-                          { id: 2, name: 'Screwdriver', shop_id: 1, shop_name: 'Main Store', aisle: 'B', bin: '2', x: 20, y: 5 },
-                        ]),
-                      }),
-                    }),
-                  }),
-                }),
-              }),
-            } as any);
-        
-          const res = await request(app)
-            .get('/v1/products')
-            .query({ shop: '1', limit: '1', page: '2', sort: 'x', order: 'desc' });
-        
-          expect(res.status).toBe(200);
-          expect(res.body).toEqual({
-            page: 2,
-            limit: 1,
-            data: [
-              {
-                id: 2,
-                name: 'Screwdriver',
-                shop: { id: 1, name: 'Main Store' },
-                location: { aisle: 'B', bin: '2', x: 20, y: 5 },
-              },
-            ],
-          });
-        });
-        it('returns 400 when query params are invalid', async () => {
-              // e.g. non-numeric limit
-              const res = await request(app)
-                .get('/v1/products')
-                .query({ limit: 'not-a-number' });
-          
-              expect(res.status).toBe(400);
-              expect(res.body).toHaveProperty('error', 'Invalid query parameters');
-              // details will include a parse error for .limit
-              expect(res.body.details.limit).toBeDefined();
-            });
-          
-            it('short‑circuits and returns cached payload on cache hit', async () => {
-              // temporarily simulate non-test env so caching runs
-              const oldEnv = process.env.NODE_ENV;
-              process.env.NODE_ENV = 'development';
-          
-              // spy on redisClient.get and logger.info
-              const { redisClient } = await import('../redis.js');
-              const { logger } = await import('../logger.js');
-              jest.spyOn(redisClient, 'get').mockResolvedValueOnce(
-                JSON.stringify({ page: 1, limit: 50, data: [{ id: 9, name: 'Cached', shop: { id: 1, name: 'Store' }, location: { aisle: 'Z', bin: '9', x: 0, y: 0 } }] })
-              );
-              const infoSpy = jest.spyOn(logger, 'info').mockImplementation(() => {});
-          
-              const res = await request(app).get('/v1/products');
-              expect(res.status).toBe(200);
-              expect(res.body).toEqual({
-                page: 1,
-                limit: 50,
-                data: [
-                  { id: 9, name: 'Cached', shop: { id: 1, name: 'Store' }, location: { aisle: 'Z', bin: '9', x: 0, y: 0 } }
-                ]
-              });
-          
-              // verify we logged the cache hit
-              expect(infoSpy).toHaveBeenCalledWith(
-                expect.objectContaining({ cacheKey: 'products:{}' }),
-                'cache hit'
-              );
-          
-              // restore env
-              process.env.NODE_ENV = oldEnv;
-            });
-
-            it('filters by shop only (default sort/page) via where→orderBy→limit→offset', async () => {
-              const mockedDb = db as unknown as jest.Mock<any, any>;
-          
-              // 1st call for base to check maybeRows (we don’t use it when hasParams=true, but your code still awaits it)
-              mockedDb.mockReturnValueOnce({
-                select: () => ({
-                  join: () => Promise.resolve(mockRows),
-                }),
-              } as any);
-          
-              // 2nd call for qb → where → orderBy → limit → offset
-              mockedDb.mockReturnValueOnce({
-                select: () => ({
-                  join: () => ({
-                    where: () => ({
-                      orderBy: () => ({
-                        limit: () => ({
-                          offset: () => Promise.resolve([
-                            { 
-                              id: 3, 
-                              name: 'Wrench', 
-                              shop_id: 2, 
-                              shop_name: 'Side Store', 
-                              aisle: 'C', 
-                              bin: '3', 
-                              x: 30, 
-                              y: 15 
-                            },
-                          ]),
-                        }),
-                      }),
-                    }),
-                  }),
-                }),
-              } as any);
-          
-              const res = await request(app)
-                .get('/v1/products')
-                .query({ shop: '2' });
-          
-              expect(res.status).toBe(200);
-              expect(res.body).toEqual({
-                page: 1,
-                limit: 50,
-                data: [
-                  {
-                    id: 3,
-                    name: 'Wrench',
-                    shop: { id: 2, name: 'Side Store' },
-                    location: { aisle: 'C', bin: '3', x: 30, y: 15 },
-                  },
-                ],
-              });
-            });
-          
-            it('returns 500 when the DB layer throws', async () => {
-              const mockedDb = db as unknown as jest.Mock<any, any>;
-          
-              // stub the very first call to reject
-              mockedDb.mockReturnValueOnce({
-                select: () => ({
-                  join: () => Promise.reject(new Error('db down')),
-                }),
-              } as any);
-          
-              const res = await request(app).get('/v1/products');
-              expect(res.status).toBe(500);
-              expect(res.body).toEqual({ error: 'Internal Server Error' });
-            });
-          });
-          
-describe('extra GET /products branches', () => {
-  const mockRows: Row[] = [
-    { id: 1, name: 'Hammer', shop_id: 1, shop_name: 'Main Store', aisle: 'A', bin: '1', x: 10, y: 5 }
-  ];
-
-  it('filters by shop only via where→orderBy→limit→offset', async () => {
-    const mockedDb = db as unknown as jest.Mock<any, any>;
-    // first call for maybeRows (we don’t use it when hasParams=true)
-    mockedDb.mockReturnValueOnce({
-      select: () => ({ join: () => Promise.resolve(mockRows) }),
-    } as any);
-
-    // second call drives the filtered path
-    mockedDb.mockReturnValueOnce({
-      select: () => ({
-        join: () => ({
-          where: () => ({
-            orderBy: () => ({
-              limit: () => ({
-                offset: () => Promise.resolve([
-                  { id: 3, name: 'Wrench', shop_id: 2, shop_name: 'Side Store', aisle: 'C', bin: '3', x: 30, y: 15 }
-                ])
-              })
-            })
-          })
-        })
-      })
-    } as any);
-
+  it('400 on invalid query parameters', async () => {
     const res = await request(app)
       .get('/v1/products')
-      .query({ shop: '2' });
+      .query({ limit: 'not-a-number' });
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error', 'Invalid query parameters');
+  });
 
+  it('200 + default paging + correct mapping when no query params', async () => {
+    const rows: Row[] = [
+      { id: 1, name: 'Hammer',      shop_id: 1, shop_name: 'Main Store', aisle: 'A', bin: '1', x: 10, y: 5 },
+      { id: 2, name: 'Screwdriver', shop_id: 1, shop_name: 'Main Store', aisle: 'B', bin: '2', x: 20, y: 5 },
+    ];
+
+    const baseBuilder: any = {
+      select: jest.fn().mockReturnThis(),
+      join:   jest.fn(async () => rows),
+    };
+
+    dbMock.mockReturnValue(baseBuilder);
+
+    const res = await request(app).get('/v1/products');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
-      page: 1,
+      page:  1,
       limit: 50,
-      data: [{
-        id: 3,
-        name: 'Wrench',
-        shop: { id: 2, name: 'Side Store' },
-        location: { aisle: 'C', bin: '3', x: 30, y: 15 },
-      }],
+      data: rows.map(r => ({
+        id:       r.id,
+        name:     r.name,
+        shop:     { id: r.shop_id, name: r.shop_name },
+        location: { aisle: r.aisle, bin: r.bin, x: r.x, y: r.y },
+      })),
     });
   });
 
-  it('returns 500 when the DB layer throws', async () => {
-    const mockedDb = db as unknown as jest.Mock<any, any>;
-    // stub the very first .join() to reject
-    mockedDb.mockReturnValueOnce({
-      select: () => ({ join: () => Promise.reject(new Error('db down')) }),
-    } as any);
+  it('200 + uses Redis cache when available (short‑circuits DB)', async () => {
+    process.env.NODE_ENV = 'production';
+    const cached = {
+      page: 1,
+      limit: 3,
+      data: [{ id: 42, name: 'Cached', shop: { id: 9, name: 'X' }, location: { aisle: 'Z', bin: '9', x: 0, y: 0 } }]
+    };
+    cacheGet.mockImplementation(async () => JSON.stringify(cached));
+
+    const res = await request(app).get('/v1/products');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(cached);
+    expect(dbMock).not.toHaveBeenCalled();
+  });
+
+  it('200 + pagination, filtering, sorting & caches the result when params present', async () => {
+    process.env.NODE_ENV = 'production';
+
+    const existBuilder: any = {
+      select: jest.fn().mockReturnThis(),
+      join:   jest.fn().mockReturnThis(),
+    };
+
+    const pagedRows: Row[] = [
+      { id: 3, name: 'Wrench', shop_id: 2, shop_name: 'Branch', aisle: 'C', bin: '3', x: 30, y: 15 },
+    ];
+
+    const pagedBuilder: any = {
+      select:   jest.fn().mockReturnThis(),
+      join:     jest.fn().mockReturnThis(),
+      where:    jest.fn().mockReturnThis(),
+      orderBy:  jest.fn().mockReturnThis(),
+      limit:    jest.fn().mockReturnThis(),
+      offset:   jest.fn(async () => pagedRows),
+    };
+
+    dbMock
+      .mockReturnValueOnce(existBuilder)
+      .mockReturnValueOnce(pagedBuilder);
+
+    const res = await request(app)
+      .get('/v1/products')
+      .query({ shop: '2', limit: '1', page: '2', sort: 'x', order: 'desc' });
+
+    expect(res.status).toBe(200);
+    const expectedPayload = {
+      page:  2,
+      limit: 1,
+      data: pagedRows.map(r => ({
+        id:       r.id,
+        name:     r.name,
+        shop:     { id: r.shop_id, name: r.shop_name },
+        location: { aisle: r.aisle, bin: r.bin, x: r.x, y: r.y },
+      })),
+    };
+    expect(res.body).toEqual(expectedPayload);
+
+    // verify DB chain calls
+    expect(pagedBuilder.where).toHaveBeenCalledWith('products.shop_id', 2);
+    expect(pagedBuilder.orderBy).toHaveBeenCalledWith('products.x', 'desc');
+    expect(pagedBuilder.limit).toHaveBeenCalledWith(1);
+    expect(pagedBuilder.offset).toHaveBeenCalledWith((2 - 1) * 1);
+
+    // verify cache set was called with correct key & value
+    const expectedKey = `products:${JSON.stringify({ shop: '2', limit: '1', page: '2', sort: 'x', order: 'desc' })}`;
+    expect(cacheSet).toHaveBeenCalledWith(
+      expectedKey,
+      JSON.stringify(expectedPayload),
+      { EX: 60 }
+    );
+  });
+
+  it('500 on DB errors (next(err) path)', async () => {
+    const dbError = new Error('DB failure');
+    const errorBuilder: any = {
+      select: jest.fn().mockReturnThis(),
+      join:   jest.fn(async () => { throw dbError }),
+    };
+    dbMock.mockReturnValue(errorBuilder);
 
     const res = await request(app).get('/v1/products');
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({ error: 'Internal Server Error' });
+    expect(res.body).toHaveProperty('error', 'DB failure');
   });
-});          
+});

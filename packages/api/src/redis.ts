@@ -11,13 +11,10 @@ redisClient.on('error', err => {
   logger.error({ err }, 'Redis client error');
 });
 
-// Connect immediately (fire‑and‑forget)
-if (process.env.NODE_ENV === 'production') {
-    // only in prod do we log—dev machines can skip or run Redis separately
+
+// Only wire up Redis outside of test
+if (process.env.NODE_ENV !== 'test') {
     redisClient.connect().catch(err => {
-      logger.error({ err }, 'Redis client error');
+      logger.error({ err }, 'Failed to connect to Redis');
     });
-  } else {
-    // dev/test: fire-and-forget, no spam
-    redisClient.connect().catch(() => {});
   }

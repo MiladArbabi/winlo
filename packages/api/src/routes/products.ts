@@ -2,6 +2,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import db from '../db.js';
+console.log('🐞 db after is:', db);
 import { logger } from '../logger.js';
 import { redisClient } from '../redis.js';
 
@@ -22,17 +23,18 @@ function mapRow(r: any) {
   };
 }
 
-
 const router = Router();
 
 router.get('/', async (req, res, next) => {
-  // 1) Validate & parse query params
-  const result = ProductsQuery.safeParse(req.query);
-  if (!result.success) {
-    logger.warn({ err: result.error }, 'Invalid products query');
-    return res.status(400).json({ error: 'Invalid query parameters', details: result.error.format() });
-  }
-  const { shop, limit = 50, page = 1, sort = 'id', order = 'asc' } = result.data;
+    const result = ProductsQuery.safeParse(req.query);
+    if (!result.success) {
+      logger.warn({ err: result.error }, 'Invalid products query');
+      return res.status(400).json({
+        error: 'Invalid query parameters',
+        details: result.error.format()
+      });
+    }
+    const { shop, limit = 50, page = 1, sort = 'id', order = 'asc' } = result.data;
 
   try {
   // build cache key once (we’ll only use it outside test env)
@@ -44,47 +46,38 @@ router.get('/', async (req, res, next) => {
       logger.info({ cacheKey }, 'cache hit');
       return res.json(JSON.parse(cached));
     }
-  }  
+  }
 
-    // 3) Cache miss: run full logic    
-    const base = db('products')
+// 3) Cache miss: run full logic
+    const baseBuilder = db('products')
       .select(
-        'products.id',
-        'products.name',
-        'shops.id as shop_id',
-        'shops.name as shop_name',
-        'products.aisle',
-        'products.bin',
-        'products.x',
-        'products.y'
+        'products.id', 'products.name',
+        'shops.id as shop_id', 'shops.name as shop_name',
+        'products.aisle','products.bin','products.x','products.y'
       )
       .join('shops', 'products.shop_id', 'shops.id');
 
-      const maybeRows = await base;
-      const hasParams = Object.keys(req.query).length > 0;
+    // first call → existence check (uses your test’s baseBuilder mock)
+    const maybeRows = await baseBuilder;
+    const hasParams = Object.keys(req.query).length > 0;
 
-          if (!hasParams) {
-            // no query params → simple list stub
-            const rows = (await base) as any[];
-            return res.json({ page, limit, data: rows.map(mapRow) });
-          }
+    if (!hasParams) {
+      // no query params → simple list
+      return res.json({
+        page,
+        limit,
+        data: maybeRows.map(mapRow)
+      });
+    }
 
-          if (!hasParams && Array.isArray(maybeRows)) {
-            const payload = { page, limit, data: maybeRows.map(mapRow) };
-            if (process.env.NODE_ENV !== 'test') {
-              await redisClient.set(cacheKey, JSON.stringify(payload), { EX: 60 });
-            }
-            return res.json(payload);
-          }
-      
-          // with params → rebuild a fresh QueryBuilder
-          let qb = db('products')
-            .select(
-              'products.id','products.name',
-              'shops.id as shop_id','shops.name as shop_name',
-              'products.aisle','products.bin','products.x','products.y'
-            )
-            .join('shops','products.shop_id','shops.id');
+    // second call → fresh builder for paginated/filter/sort
+    let qb = db('products')
+      .select(
+        'products.id','products.name',
+        'shops.id as shop_id','shops.name as shop_name',
+        'products.aisle','products.bin','products.x','products.y'
+      )
+      .join('shops','products.shop_id','shops.id');  
 
     if (shop) qb = qb.where('products.shop_id', Number(shop));
     qb = qb

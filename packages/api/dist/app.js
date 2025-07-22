@@ -6,6 +6,13 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { httpLogger, logger } from './logger.js';
 import v1Router from './routes/v1/index.js';
+import swaggerUI from 'swagger-ui-express';
+import YAML from 'yamljs';
+import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
+// === emulate __dirname in ESM ===
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 const app = express();
 // 0) Security headers
 app.use(helmet());
@@ -19,6 +26,9 @@ app.use(rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
 }));
+// ** serve OpenAPI UI **
+const spec = YAML.load(resolve(__dirname, 'openapi.yaml'));
+app.use('/docs', swaggerUI.serve, swaggerUI.setup(spec));
 // 1) Log every incoming request
 app.use(httpLogger);
 // 2) parse JSON bodies
@@ -29,7 +39,8 @@ app.use('/v1', v1Router);
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 // 5) global error handler (after all routes)
 app.use((err, _req, res, _next) => {
+    console.error(err.stack || err);
     logger.error({ err }, 'Unhandled error');
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
 export default app;
