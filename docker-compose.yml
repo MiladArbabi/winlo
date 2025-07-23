@@ -3,18 +3,33 @@ services:
     build:
       context: ./packages/api
       dockerfile: Dockerfile
+
     environment:
       PGHOST: postgres
       PGUSER: postgres
       PGPASSWORD: postgres
       PGDATABASE: winlo
-      REDIS_URL:  redis://redis:6379
+      REDIS_URL: redis://redis:6379
       PORT: 3000
+
+    healthcheck:              # ← must be at the same indent level as `environment:`
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
     ports:
       - "3000:3000"
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./packages/api/src:/app/src
+      - ./packages/api/config:/app/config
+      - ./packages/api/scripts:/app/scripts
+
 
   postgres:
     image: postgres:14
@@ -24,8 +39,18 @@ services:
       POSTGRES_DB: winlo
     ports:
       - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h postgres -p 5432 -U postgres"]
+      interval: "5s"
+      timeout:  "5s"
+      retries:  5
 
   redis:
     image: redis:7
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: "5s"
+      timeout:  "5s"
+      retries:  5

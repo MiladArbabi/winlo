@@ -2,7 +2,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import db from '../db.js';
-console.log('🐞 db after is:', db);
 import { logger } from '../logger.js';
 import { redisClient } from '../redis.js';
 

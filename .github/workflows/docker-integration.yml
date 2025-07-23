@@ -1,0 +1,60 @@
+name: 🐳 Docker Integration Smoke Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  container-smoke:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: winlo_test
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build & start API
+        working-directory: packages/api
+        run: |
+          docker-compose up -d api
+
+      - name: Wait for API to become healthy
+        run: |
+          for i in {1..30}; do
+            status=$(docker inspect --format='{{.State.Health.Status}}' winlo-api-1 2>/dev/null || echo unknown)
+            echo "API health: $status"
+            [ "$status" = healthy ] && exit 0
+            sleep 2
+          done
+          echo "API failed to become healthy" >&2
+          docker logs winlo-api-1 >&2
+          exit 1
+
+      - name: Smoke‑test endpoints
+        run: |
+          curl -f http://localhost:3000/health
+          curl -f http://localhost:3000/v1/products
+
+      - name: Teardown
+        if: always()
+        working-directory: packages/api
+        run: docker-compose down

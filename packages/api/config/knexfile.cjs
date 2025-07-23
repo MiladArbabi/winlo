@@ -1,5 +1,4 @@
 // packages/api/config/knexfile.cjs
-require('ts-node').register();
 module.exports = {
   development: {
     client:    'pg',

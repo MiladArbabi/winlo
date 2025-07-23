@@ -30,11 +30,13 @@ function mapRow(r) {
 }
 const router = Router();
 router.get('/', (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    // 1) Validate & parse query params
     const result = ProductsQuery.safeParse(req.query);
     if (!result.success) {
         logger.warn({ err: result.error }, 'Invalid products query');
-        return res.status(400).json({ error: 'Invalid query parameters', details: result.error.format() });
+        return res.status(400).json({
+            error: 'Invalid query parameters',
+            details: result.error.format()
+        });
     }
     const { shop, limit = 50, page = 1, sort = 'id', order = 'asc' } = result.data;
     try {
@@ -48,25 +50,22 @@ router.get('/', (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
                 return res.json(JSON.parse(cached));
             }
         }
-        // 3) Cache miss: run full logic    
-        const base = db('products')
+        // 3) Cache miss: run full logic
+        const baseBuilder = db('products')
             .select('products.id', 'products.name', 'shops.id as shop_id', 'shops.name as shop_name', 'products.aisle', 'products.bin', 'products.x', 'products.y')
             .join('shops', 'products.shop_id', 'shops.id');
-        const maybeRows = yield base;
+        // first call → existence check (uses your test’s baseBuilder mock)
+        const maybeRows = yield baseBuilder;
         const hasParams = Object.keys(req.query).length > 0;
         if (!hasParams) {
-            // no query params → simple list stub
-            const rows = (yield base);
-            return res.json({ page, limit, data: rows.map(mapRow) });
+            // no query params → simple list
+            return res.json({
+                page,
+                limit,
+                data: maybeRows.map(mapRow)
+            });
         }
-        if (!hasParams && Array.isArray(maybeRows)) {
-            const payload = { page, limit, data: maybeRows.map(mapRow) };
-            if (process.env.NODE_ENV !== 'test') {
-                yield redisClient.set(cacheKey, JSON.stringify(payload), { EX: 60 });
-            }
-            return res.json(payload);
-        }
-        // with params → rebuild a fresh QueryBuilder
+        // second call → fresh builder for paginated/filter/sort
         let qb = db('products')
             .select('products.id', 'products.name', 'shops.id as shop_id', 'shops.name as shop_name', 'products.aisle', 'products.bin', 'products.x', 'products.y')
             .join('shops', 'products.shop_id', 'shops.id');
