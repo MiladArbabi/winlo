@@ -77,6 +77,38 @@ Swagger UI available at http://localhost:3000/docs
 OpenAPI spec: see src/openapi.yaml
 All endpoints under /v1/* will soon require a Bearer‑JWT token scoped to your shop. See Issue #14.
 
+## 🚀 Local development with Docker Compose
+
+We maintain a single `.env.example` at the repo root; copy it to `.env` and fill in any secrets:
+
+```bash
+cp .env.example .env
+# (edit .env to add your values, e.g. JWT_SECRET)
+
+# Build and start all services (API, Postgres, Redis)
+docker-compose up --build -d
+
+# Verify API health
+curl -f http://localhost:3000/health
+
+# Get a JWT for shop #1
+TOKEN=$(
+  curl -s -XPOST http://localhost:3000/v1/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{"shopId":1,"secret":"<your-shop-secret>"}' \
+  | jq -r .token
+)
+
+# List products
+curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/v1/products | jq
+
+# Teardown when done
+docker-compose down
+
+Ports exposed:
+    3000 → API
+    5433 → Postgres (inside container is 5432)
+    6379 → Redis
 ---
 
 🚧 Roadmap

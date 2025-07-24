@@ -1,4 +1,4 @@
-version: "3.8"
+# docker-compose.yml
 
 services:
   api:
@@ -7,36 +7,29 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
-    # any extra overrides you want:
-    environment:
-      # these are read from .env already; you can omit if you like
-      REDIS_URL: ${REDIS_URL}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
     ports:
       - "3000:3000"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    # for local dev hot‑reload (optional)
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     volumes:
       - ./packages/api/src:/app/src
+      - ./packages/api/config:/app/config
       - ./packages/api/scripts:/app/scripts
 
   postgres:
     image: postgres:14
-    env_file:
-      - .env
     environment:
-      POSTGRES_USER: ${PGUSER}
-      POSTGRES_PASSWORD: ${PGPASSWORD}
-      POSTGRES_DB: ${PGDATABASE}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: winlo
     ports:
       - "5433:5432"
     healthcheck:
