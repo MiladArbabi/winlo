@@ -37,6 +37,10 @@ jobs:
         run: |
           docker-compose up -d api
 
+      - name: Audit production container deps
+        working-directory: packages/api
+        run: docker exec winlo-api-1 npm audit --audit-level=moderate || exit 1    
+
       - name: Wait for API to become healthy
         run: |
           for i in {1..30}; do
