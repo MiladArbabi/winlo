@@ -1,10 +1,8 @@
-# docker-compose.yml
-
 services:
   api:
     build:
-      context: ./packages/api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: packages/api/Dockerfile
     env_file:
       - .env
     ports:
@@ -15,35 +13,37 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/health"]
+      test: ["CMD-SHELL","curl -f http://localhost:3000/health"]
       interval: 5s
       timeout: 3s
       retries: 5
+    # for live development you can still mount src, config, scripts:
     volumes:
       - ./packages/api/src:/app/src
       - ./packages/api/config:/app/config
-      - ./packages/api/scripts:/app/scripts
+      - ./packages/api/scripts:/app
 
   postgres:
     image: postgres:14
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: winlo
     ports:
       - "5433:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h postgres -p 5432 -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
   redis:
     image: redis:7
     ports:
       - "6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
       interval: 5s
       timeout: 5s
       retries: 5

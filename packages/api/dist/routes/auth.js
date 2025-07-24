@@ -26,6 +26,7 @@ router.post('/login', (req, res, next) => __awaiter(void 0, void 0, void 0, func
     try {
         // assumes you’ve added a `secret` column to `shops`
         const shop = yield db('shops').where({ id: shopId }).first();
+        console.log({ shop, incoming: { shopId, secret } });
         if (!shop || shop.secret !== secret) {
             return res.status(401).json({ error: 'Invalid shopId or secret' });
         }
@@ -34,6 +35,7 @@ router.post('/login', (req, res, next) => __awaiter(void 0, void 0, void 0, func
         // cast into SignOptions so TS stops complaining
         const options = { expiresIn: expiresInValue };
         const token = jwt.sign({ shopId }, jwtSecret, options);
+        return res.json({ token, expiresIn: options.expiresIn });
     }
     catch (err) {
         next(err);

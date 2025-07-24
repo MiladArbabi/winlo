@@ -1,36 +1,45 @@
-# 1) base for both installing
+# 1) base: node + pg_isready
 FROM node:18-alpine AS base
 RUN apk add --no-cache postgresql-client
 WORKDIR /app
+COPY tsconfig.base.json ./
 
-# 2) dev-deps: install everything (prod + dev) so we can compile TS
-FROM base AS dev-deps
-COPY package*.json ./
-RUN npm ci
+# 2) build: copy in API sources & build
+FROM base AS build
 
-# 3) deps: install only production deps for the final image
-FROM base AS deps
-COPY package*.json ./
-RUN npm ci --omit=dev
+# bring in root tsconfig for "extends"
+COPY tsconfig.base.json ./tsconfig.base.json
 
-# 4) build: compile TS → JS
-FROM dev-deps AS build
-COPY . .
+# bring in only the API package manifest and source
+COPY packages/api/package.json   ./package.json
+COPY packages/api/package-lock.json* ./package-lock.json
+COPY packages/api/tsconfig.json  ./tsconfig.json
+COPY tsconfig.base.json           ./tsconfig.base.json
+COPY packages/api/src            ./src
+COPY packages/api/src/openapi.yaml   ./openapi.yaml
+
+# install all deps (dev + prod) so we can compile
+RUN npm install --ignore-scripts
+
+# compile TypeScript → dist/
 RUN npm run build
 
-# 5) release: minimal runtime
+# 3) release: prod‑only image
 FROM node:18-alpine AS release
 RUN apk add --no-cache postgresql-client
 WORKDIR /app
 
-# copy compiled JS
+# copy compiled code
 COPY --from=build /app/dist ./dist
-# copy only production deps
-COPY --from=deps  /app/node_modules ./node_modules
 
-# our entrypoint will run migrations/seeds then start
-COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# copy full node_modules, then prune dev‑deps
+COPY --from=build /app/node_modules ./node_modules
+RUN npm prune --production
+
+# copy config & entrypoint
+COPY packages/api/config      ./config
+COPY packages/api/scripts/docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
 
 EXPOSE 3000
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+ENTRYPOINT ["./docker-entrypoint.sh"]

@@ -35,7 +35,7 @@ jobs:
       - name: Build & start API
         working-directory: packages/api
         run: |
-          docker-compose up -d api
+          docker compose up -d api
 
       - name: Audit production container deps
         working-directory: packages/api
@@ -61,4 +61,4 @@ jobs:
       - name: Teardown
         if: always()
         working-directory: packages/api
-        run: docker-compose down
+        run: docker compose down

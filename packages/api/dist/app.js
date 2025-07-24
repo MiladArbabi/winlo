@@ -37,6 +37,7 @@ app.use(httpLogger);
 // 2) parse JSON bodies
 app.use(express.json());
 // 3a) public auth endpoint under /v1/auth
+console.log('[app] → mounting authRouter @ /v1/auth');
 app.use('/v1/auth', authRouter);
 // 3b) protect everything else under /v1 with JWT
 app.use('/v1', authenticateJWT, v1Router);
