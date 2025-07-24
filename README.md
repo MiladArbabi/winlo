@@ -1,6 +1,6 @@
 # WINLO
 
-Warehouse Inventory Locator (WINLO) is a B2B SaaS for warehouse‐style shops to help customers find products fast, optimize repeat trips, and give shop owners heatmaps & insights.
+Warehouse Inventory Locator (WINLO) is a B2B SaaS for warehouse‑style shops to help customers find products fast, optimize repeat trips, and give shop owners heatmaps & insights.
 
 ---
 
@@ -9,51 +9,77 @@ Warehouse Inventory Locator (WINLO) is a B2B SaaS for warehouse‐style shops to
 ### Prerequisites
 
 - **Node.js** v16+  
-- **PostgreSQL** (e.g. `postgres://postgres:postgres@localhost:5432/winlo`)  
+- **PostgreSQL**  
 - **Redis** _(optional, for caching)_  
-- **Docker & Docker Compose** _(for containerized development)_
+- **Docker & Docker Compose** _(for local containerized development)_
 
 ### Installation
 
-# from project root:
+```bash
+# Clone & install
 git clone https://github.com/MiladArbabi/winlo.git
 cd winlo/packages/api
 npm install
 
-# PostgreSQL
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/winlo
+# Database (Postgres)
+PGHOST=localhost
+PGUSER=postgres
+PGPASSWORD=postgres
+PGDATABASE=winlo
 
 # Redis (optional)
 REDIS_URL=redis://localhost:6379
 
-# CORS – comma‑separated list of allowed origins
+# HTTP server
+PORT=3000
 ALLOWED_ORIGINS=http://localhost:3000
 
-# Server
-PORT=4000
+# JWT auth (Issue #14)
+JWT_SECRET=your-very-secure-random-string
+JWT_EXPIRES_IN=1h
 
-# run migrations
+# Caching & rate‑limiting
+REDIS_URL=redis://localhost:6379
+
+# Run migrations & seed data
 npm run migrate
 
 # seed initial data
 npm run seed
 
-# start in watch mode
+# Start in watch mode (TS → JS on the fly)
 npm run dev
 
-# or build + start + test
+# or build & run:
 npm run build
 npm start
+
+# or test
 npm test
+
+# Run in Docker
+# From project root:
+docker-compose up --build
+
+# Wait for the API to become healthy, then:
+curl http://localhost:3000/health
+curl http://localhost:3000/v1/products
+
+# Tear down:
+docker-compose down
 
 ## Roadmap
 This project is structured around clear milestones, each tracked by dedicated GitHub issues.
 We’re building WINLO with a professional, test-driven, milestone-focused approach.
 
-
+### API Documentation
+Swagger UI available at http://localhost:3000/docs
+OpenAPI spec: see src/openapi.yaml
+All endpoints under /v1/* will soon require a Bearer‑JWT token scoped to your shop. See Issue #14.
 
 ---
 
+🚧 Roadmap
 ### MVP FOUNDATION
 - [#1](../../issues/1) Setup React Native hello world in `packages/app`  
 - [#2](../../issues/2) Setup Next.js admin dashboard in `packages/admin`  

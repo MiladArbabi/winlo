@@ -1,5 +1,6 @@
-// packages/api/seeds/02_products.cjs
+// packages/api/src/db/seeds/02_products.cjs
 /** @param { import("knex").Knex } knex */
+console.log('⏳ running 02_products seed…');
 exports.seed = async function (knex) {
     await knex('products').del();
     await knex('products').insert([

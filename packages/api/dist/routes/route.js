@@ -7,6 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+// packages/api/src/routes/route.ts
 import { Router } from 'express';
 import { z } from 'zod';
 import db from '../db.js';
@@ -26,9 +27,11 @@ router.post('/', (req, res, next) => __awaiter(void 0, void 0, void 0, function*
     const { productIds } = result.data;
     try {
         // 2) fetch
+        const shopId = req.shopId;
         const rows = yield db('products')
             .select('products.id', 'products.name', 'shops.id as shop_id', 'shops.name as shop_name', 'products.aisle', 'products.bin', 'products.x', 'products.y')
             .join('shops', 'products.shop_id', 'shops.id')
+            .where('products.shop_id', shopId)
             .whereIn('products.id', productIds);
         // 3) map to Product
         const products = rows.map(r => ({

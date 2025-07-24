@@ -1,3 +1,4 @@
+// packages/api/src/routes/route.ts
 import { Router } from 'express';
 import { z } from 'zod';
 import db from '../db.js';
@@ -40,6 +41,7 @@ router.post('/', async (req, res, next) => {
 
   try {
     // 2) fetch
+    const shopId = (req as import('../middleware/auth.js').AuthenticatedRequest).shopId;
     const rows = await db('products')
       .select(
         'products.id',
@@ -52,6 +54,7 @@ router.post('/', async (req, res, next) => {
         'products.y'
       )
       .join('shops', 'products.shop_id', 'shops.id')
+      .where('products.shop_id', shopId)
       .whereIn('products.id', productIds) as Row[];
 
     // 3) map to Product

@@ -38,7 +38,9 @@ router.get('/', (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
             details: result.error.format()
         });
     }
-    const { shop, limit = 50, page = 1, sort = 'id', order = 'asc' } = result.data;
+    // shop comes from JWT, ignore any client‑passed shop param
+    const { limit = 50, page = 1, sort = 'id', order = 'asc' } = result.data;
+    const shopId = req.shopId;
     try {
         // build cache key once (we’ll only use it outside test env)
         const cacheKey = `products:${JSON.stringify(req.query)}`;
@@ -53,7 +55,8 @@ router.get('/', (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
         // 3) Cache miss: run full logic
         const baseBuilder = db('products')
             .select('products.id', 'products.name', 'shops.id as shop_id', 'shops.name as shop_name', 'products.aisle', 'products.bin', 'products.x', 'products.y')
-            .join('shops', 'products.shop_id', 'shops.id');
+            .join('shops', 'products.shop_id', 'shops.id')
+            .where('products.shop_id', shopId);
         // first call → existence check (uses your test’s baseBuilder mock)
         const maybeRows = yield baseBuilder;
         const hasParams = Object.keys(req.query).length > 0;
@@ -69,9 +72,8 @@ router.get('/', (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
         let qb = db('products')
             .select('products.id', 'products.name', 'shops.id as shop_id', 'shops.name as shop_name', 'products.aisle', 'products.bin', 'products.x', 'products.y')
             .join('shops', 'products.shop_id', 'shops.id');
-        if (shop)
-            qb = qb.where('products.shop_id', Number(shop));
         qb = qb
+            .where('products.shop_id', shopId)
             .orderBy(`products.${sort}`, order)
             .limit(limit)
             .offset((page - 1) * limit);

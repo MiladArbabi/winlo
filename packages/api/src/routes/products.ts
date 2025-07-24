@@ -33,7 +33,9 @@ router.get('/', async (req, res, next) => {
         details: result.error.format()
       });
     }
-    const { shop, limit = 50, page = 1, sort = 'id', order = 'asc' } = result.data;
+    // shop comes from JWT, ignore any client‑passed shop param
+    const { limit = 50, page = 1, sort = 'id', order = 'asc' } = result.data;
+    const shopId = (req as import('../middleware/auth.js').AuthenticatedRequest).shopId;
 
   try {
   // build cache key once (we’ll only use it outside test env)
@@ -54,7 +56,8 @@ router.get('/', async (req, res, next) => {
         'shops.id as shop_id', 'shops.name as shop_name',
         'products.aisle','products.bin','products.x','products.y'
       )
-      .join('shops', 'products.shop_id', 'shops.id');
+      .join('shops', 'products.shop_id', 'shops.id')
+      .where('products.shop_id', shopId);
 
     // first call → existence check (uses your test’s baseBuilder mock)
     const maybeRows = await baseBuilder;
@@ -78,8 +81,8 @@ router.get('/', async (req, res, next) => {
       )
       .join('shops','products.shop_id','shops.id');  
 
-    if (shop) qb = qb.where('products.shop_id', Number(shop));
     qb = qb
+      .where('products.shop_id', shopId)
       .orderBy(`products.${sort}`, order as 'asc' | 'desc')
       .limit(limit)
       .offset((page - 1) * limit);

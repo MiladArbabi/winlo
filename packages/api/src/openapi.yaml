@@ -6,56 +6,79 @@ info:
 servers:
   - url: /v1
 paths:
-  /products:
-    get:
-      summary: List products
-      parameters:
-        - name: shop
-          in: query
-          schema:
-            type: integer
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 50
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 1
-        - name: sort
-          in: query
-          schema:
-            type: string
-        - name: order
-          in: query
-          schema:
-            type: string
-            enum: [asc, desc]
-      responses:
-        '200':
-          description: OK
+    /auth/login:
+      post:
+        summary: Shop login
+        requestBody:
+          required: true
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProductList'
-  /route:
-    post:
-      summary: Compute optimized route
-      requestBody:
-        required: true
-        content:
-          application/json:
+                type: object
+                required: [shopId, secret]
+                properties:
+                  shopId: { type: integer }
+                  secret: { type: string }
+        responses:
+          '200':
+            description: JWT token issued
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    token:     { type: string }
+                    expiresIn: { type: string }
+    /products:
+      get:
+        summary: List products
+        parameters:
+          - name: shop
+            in: query
             schema:
-              $ref: '#/components/schemas/RouteRequest'
-      responses:
-        '200':
-          description: Route planned
+              type: integer
+          - name: limit
+            in: query
+            schema:
+              type: integer
+              default: 50
+          - name: page
+            in: query
+            schema:
+              type: integer
+              default: 1
+          - name: sort
+            in: query
+            schema:
+              type: string
+          - name: order
+            in: query
+            schema:
+              type: string
+              enum: [asc, desc]
+        responses:
+          '200':
+            description: OK
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ProductList'
+    /route:
+      post:
+        summary: Compute optimized route
+        requestBody:
+          required: true
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RouteResponse'
+                $ref: '#/components/schemas/RouteRequest'
+        responses:
+          '200':
+            description: Route planned
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/RouteResponse'
 components:
   schemas:
     Product:
@@ -97,3 +120,12 @@ components:
         route:
           type: array
           items: { $ref: '#/components/schemas/Product' }
+
+  security:
+    - bearerAuth: []
+
+  securitySchemes:
+      bearerAuth:
+        type: http
+        scheme: bearer
+        bearerFormat: JWT

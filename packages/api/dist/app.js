@@ -10,10 +10,13 @@ import swaggerUI from 'swagger-ui-express';
 import YAML from 'yamljs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
+import { authenticateJWT } from './middleware/auth.js';
+import authRouter from './routes/auth.js';
 // === emulate __dirname in ESM ===
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const app = express();
+app.get('/health', (_req, res) => res.json({ status: 'ok', uptime: process.uptime() }));
 // 0) Security headers
 app.use(helmet());
 // 0b) CORS – only allow origins in env.ALLOWED_ORIGINS (comma‑sep), fallback to none
@@ -33,8 +36,10 @@ app.use('/docs', swaggerUI.serve, swaggerUI.setup(spec));
 app.use(httpLogger);
 // 2) parse JSON bodies
 app.use(express.json());
-// 3) versioned v1 routes
-app.use('/v1', v1Router);
+// 3a) public auth endpoint under /v1/auth
+app.use('/v1/auth', authRouter);
+// 3b) protect everything else under /v1 with JWT
+app.use('/v1', authenticateJWT, v1Router);
 // 4) health-check
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 // 5) global error handler (after all routes)
