@@ -1,15 +1,10 @@
 {
-    "compilerOptions": {
-      "target": "ES2020",
-      "module": "commonjs",
-      "rootDir": "./src",
-      "outDir": "./dist",
-      "esModuleInterop": true,
-      "strict": true
-    },
- "exclude": [
-   "node_modules",
-   "packages"
- ]
-  }
-  
+  "extends": "./tsconfig.base.json",
+  "files": [],
+  "references": [
+    { "path": "packages/shared" },
+    { "path": "packages/api" },
+    { "path": "packages/app" },
+    { "path": "packages/admin" }
+  ]
+}

@@ -1,34 +1,34 @@
-# packages/api/Dockerfile
-# 1) base image with just the client
+# 1) base for both installing
 FROM node:18-alpine AS base
-
-# we need pg_isready in entrypoint
 RUN apk add --no-cache postgresql-client
-
 WORKDIR /app
+
+# 2) dev-deps: install everything (prod + dev) so we can compile TS
+FROM base AS dev-deps
 COPY package*.json ./
+RUN npm ci
 
-# 2) install deps
+# 3) deps: install only production deps for the final image
 FROM base AS deps
-RUN npm ci --only=production
+COPY package*.json ./
+RUN npm ci --omit=dev
 
-# 3) build (we only need node_modules + source to build)
-FROM deps AS build
+# 4) build: compile TS → JS
+FROM dev-deps AS build
 COPY . .
 RUN npm run build
 
-# 4) runtime image
+# 5) release: minimal runtime
 FROM node:18-alpine AS release
-
-# pg_isready again
 RUN apk add --no-cache postgresql-client
-
 WORKDIR /app
-# copy built JS and prod deps
+
+# copy compiled JS
 COPY --from=build /app/dist ./dist
+# copy only production deps
 COPY --from=deps  /app/node_modules ./node_modules
 
-# entrypoint (migrate, seed, start)
+# our entrypoint will run migrations/seeds then start
 COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 

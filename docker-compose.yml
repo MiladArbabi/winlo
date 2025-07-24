@@ -1,49 +1,49 @@
+version: "3.8"
+
 services:
   api:
     build:
       context: ./packages/api
       dockerfile: Dockerfile
-
+    env_file:
+      - .env
+    # any extra overrides you want:
     environment:
-      PGHOST: postgres
-      PGUSER: postgres
-      PGPASSWORD: postgres
-      PGDATABASE: winlo
-      REDIS_URL: redis://redis:6379
-      PORT: 3000
-
-    healthcheck:              # ← must be at the same indent level as `environment:`
+      # these are read from .env already; you can omit if you like
+      REDIS_URL: ${REDIS_URL}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+    ports:
+      - "3000:3000"
+    healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/health"]
       interval: 5s
       timeout: 3s
       retries: 5
-
-    ports:
-      - "3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # for local dev hot‑reload (optional)
     volumes:
       - ./packages/api/src:/app/src
-      - ./packages/api/config:/app/config
       - ./packages/api/scripts:/app/scripts
-
 
   postgres:
     image: postgres:14
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: winlo
+      POSTGRES_USER: ${PGUSER}
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+      POSTGRES_DB: ${PGDATABASE}
     ports:
       - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h postgres -p 5432 -U postgres"]
-      interval: "5s"
-      timeout:  "5s"
-      retries:  5
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7
@@ -51,6 +51,6 @@ services:
       - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: "5s"
-      timeout:  "5s"
-      retries:  5
+      interval: 5s
+      timeout: 5s
+      retries: 5
