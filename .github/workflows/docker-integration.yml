@@ -57,6 +57,12 @@ jobs:
         run: |
           curl -f http://localhost:3000/health
           curl -f http://localhost:3000/v1/products
+      
+      - name: Audit container deps
+      # fail if any moderate+ vuln in production deps
+        run: |
+          docker exec winlo-api-1 \
+          sh -c "npm audit --production --audit-level=moderate"    
 
       - name: Teardown
         if: always()
