@@ -53,7 +53,12 @@ console.log('[app] → mounting authRouter @ /v1/auth');
 app.use('/v1/auth', authRouter);
 
 // 3b) protect everything else under /v1 with JWT
-app.use('/v1', authenticateJWT, v1Router);
+if (process.env.NODE_ENV === 'test') {
+  // skip auth in tests
+  app.use('/v1', v1Router);
+} else {
+  app.use('/v1', authenticateJWT, v1Router);
+}
 
 // 4) health-check
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));

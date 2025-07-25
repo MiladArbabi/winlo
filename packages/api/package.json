@@ -13,7 +13,7 @@
     "seed:test": "knex seed:run     --env test --knexfile ./config/knexfile.cjs",
     "start": "node dist/index.js",
     "lint": "echo \"No lint configured yet\"",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest --config config/jest.config.cjs",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --config ./config/jest.config.cjs", 
     "coverage": "npm test -- --coverage",
     "audit:ci": "npm audit --audit-level=moderate"
   },
