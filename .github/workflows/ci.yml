@@ -48,7 +48,7 @@ jobs:
         run: npm ci
 
       - name: Audit dependencies
-        run: npm audit --audit-level=moderate 
+        run: npm run audit:ci
 
       - name: Run DB migrations (test)
         run: npm run migrate:test

@@ -39,7 +39,7 @@ jobs:
 
       - name: Audit production container deps
         working-directory: packages/api
-        run: docker exec winlo-api-1 npm audit --audit-level=moderate || exit 1    
+        run: docker exec winlo-api-1 npm run audit:ci || exit 1
 
       - name: Wait for API to become healthy
         run: |
@@ -58,11 +58,11 @@ jobs:
           curl -f http://localhost:3000/health
           curl -f http://localhost:3000/v1/products
       
-      - name: Audit container deps
+      - name: Audit container deps (production)
       # fail if any moderate+ vuln in production deps
         run: |
           docker exec winlo-api-1 \
-          sh -c "npm audit --production --audit-level=moderate"    
+          sh -c "npm run audit:ci -- --production"   
 
       - name: Teardown
         if: always()

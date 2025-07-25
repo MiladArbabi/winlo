@@ -1,4 +1,3 @@
-# packages/api/scripts/docker-entrypoint.sh
 #!/usr/bin/env sh
 set -e
 

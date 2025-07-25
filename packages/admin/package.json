@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "audit:ci": "npm audit --audit-level=moderate"
   },
   "dependencies": {
     "react": "^19.0.0",
