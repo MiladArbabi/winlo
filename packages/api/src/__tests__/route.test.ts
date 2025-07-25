@@ -1,14 +1,16 @@
 // packages/api/src/__tests__/route.test.ts
+import type { Knex } from 'knex';
+import { jest } from '@jest/globals';
+
+const dbMock = jest.fn();
+jest.mock('../db.js', () => ({
+  __esModule: true,
+  default: dbMock,
+}));
+
 import request from 'supertest';
 import app from '../app.js';
-import type { Knex } from 'knex';
-import { jest } from '@jest/globals'
 import db from '../db.js';
-
-jest.mock('../db.js', () => {
-  const mockDb = jest.fn();
-  return { __esModule: true, default: mockDb };
-});
 
 type Row = {
   id: number;
@@ -22,14 +24,9 @@ type Row = {
 };
 
 describe('POST /route', () => {
-  const db: jest.Mock = jest.fn();
-  const mockRows: Row[] = [
-    { id: 1, name: 'A', shop_id: 1, shop_name: 'Store', aisle: 'X', bin: '1', x: 1, y: 1 },
-    { id: 2, name: 'B', shop_id: 1, shop_name: 'Store', aisle: 'Y', bin: '2', x: 4, y: 5 },
-  ];
-
+  
   beforeEach(() => {
-    db.mockReturnValue({
+    dbMock.mockReturnValue({
       select: () => ({
         join: () => ({
           whereIn: (_col: string, ids: number[]) =>

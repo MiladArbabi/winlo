@@ -60,6 +60,10 @@ if (process.env.NODE_ENV === 'test') {
   app.use('/v1', authenticateJWT, v1Router);
 }
 
+if (process.env.NODE_ENV !== 'test') {
+  app.use(require('pino-http')());
+}
+
 // 4) health-check
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 

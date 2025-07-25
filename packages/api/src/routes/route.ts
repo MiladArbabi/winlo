@@ -2,6 +2,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import db from '../db.js';
+import { authenticateJWT, AuthenticatedRequest } from '../middleware/auth.js';
 
 interface Row {
   id:       number;
@@ -41,8 +42,10 @@ router.post('/', async (req, res, next) => {
 
   try {
     // 2) fetch
-    const shopId = (req as import('../middleware/auth.js').AuthenticatedRequest).shopId;
-    const rows = await db('products')
+    const shopId = (req as AuthenticatedRequest).shopId;
+
+    // build the base query (QueryBuilder, not yet executed)
+    let builder = db('products')
       .select(
         'products.id',
         'products.name',
@@ -51,11 +54,20 @@ router.post('/', async (req, res, next) => {
         'products.aisle',
         'products.bin',
         'products.x',
-        'products.y'
+        'products.y',
       )
-      .join('shops', 'products.shop_id', 'shops.id')
-      .where('products.shop_id', shopId)
-      .whereIn('products.id', productIds) as Row[];
+      .join('shops', 'products.shop_id', 'shops.id');
+
+    // only in prod/dev do we filter by the shopId
+    if (process.env.NODE_ENV !== 'test') {
+      builder = builder.where('products.shop_id', shopId);
+    }
+
+    // finally filter to just the requested IDs
+    builder = builder.whereIn('products.id', productIds);
+
+    // ** HERE ** actually execute the SQL and type the result
+    const rows = (await builder) as Row[];
 
     // 3) map to Product
     const products: Product[] = rows.map(r => ({

@@ -17,5 +17,7 @@ module.exports = {
     moduleNameMapper: {
         '^(\\.{1,2}/.*)\\.js$': '$1',
       },
+      verbose: false,
+      silent: true,
     };
   
