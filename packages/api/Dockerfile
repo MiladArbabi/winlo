@@ -36,6 +36,10 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
 RUN npm prune --production
 
+# bring in package manifest so `npm run audit:ci` works
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/package-lock.json* ./package-lock.json
+
 # copy config & entrypoint
 COPY packages/api/config      ./config
 COPY packages/api/scripts/docker-entrypoint.sh ./docker-entrypoint.sh
