@@ -1,0 +1,46 @@
+---
+# .github/dependabot.yml
+version: 2
+updates:
+  # 1) Keep root-level dependencies up‑to‑date
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "npm"
+    # only open major bumps if you’ve opted in
+    allow:
+      - dependency-type: "all"
+
+  # 2) Also update the API workspace
+  - package-ecosystem: "npm"
+    directory: "/packages/api"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "npm"
+
+  # 3) Update the Admin dashboard workspace
+  - package-ecosystem: "npm"
+    directory: "/packages/admin"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "npm"
+
+  # 4) Keep GitHub Actions workflow versions fresh
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
