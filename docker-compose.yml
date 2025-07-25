@@ -23,7 +23,7 @@ services:
     volumes:
       - ./packages/api/src:/app/src
       - ./packages/api/config:/app/config
-      - ./packages/api/scripts:/app
+      - ./packages/api/scripts:/app/scripts
 
   postgres:
     image: postgres:14
